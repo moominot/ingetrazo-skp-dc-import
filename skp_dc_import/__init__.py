@@ -78,6 +78,29 @@ def setup(app):
         tip="Import a .skp keeping its components nested, with their "
             "SketchUp Dynamic Components attributes.")
 
+    # Component Options: a side-tray tab that follows the selection.
+    from .ui import OptionsPanel, selected_root
+    panel = OptionsPanel(app)
+    dock = app.add_panel("Component Options", panel, start_hidden=True)
+
+    def show_options():
+        app.show_panel(dock)
+        panel.show_group(selected_root(app.viewport.scene), force=True)
+
+    app.add_menu_action(
+        "Dynamic component options…", show_options,
+        tip="Options of the selected SketchUp dynamic component.")
+
+    if hasattr(app, "add_context_menu"):
+        def context(menu, selection):
+            if selected_root(app.viewport.scene) is None:
+                return
+            from PySide6.QtCore import QTimer
+            menu.addSeparator()
+            menu.addAction("Dynamic component options…",
+                           lambda: QTimer.singleShot(0, show_options))
+        app.add_context_menu(context)
+
     def kind(group):
         data = (group.ext or {}).get(KEY)
         if not data:
