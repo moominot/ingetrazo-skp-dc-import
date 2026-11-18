@@ -145,9 +145,15 @@ def build(scene, model, path) -> dict:
         defn = by_id.get(getattr(inst, "ref_idx", None))
         if defn is None or depth > _MAX_DEPTH:
             return None
-        inherited = getattr(inst, "material_id", None) or inherited
-        group = Group(mesh_for(defn, inherited),
+        # The instance's paint stays ON the part (IngeTrazo, like SketchUp,
+        # shows a container's paint on every unpainted face below it), so a
+        # Material formula that repaints the part shows; the faces are not
+        # baked with it, and every placement shares one mesh.
+        group = Group(mesh_for(defn, None),
                       name=getattr(inst, "name", "") or getattr(defn, "name", "") or None)
+        mid = getattr(inst, "material_id", None)
+        if mid is not None and attr_map.get(mid):
+            group.material = dict(attr_map[mid])
         group.xform = so._matrix(inst.matrix)
         group.component = not getattr(defn, "is_group", False)
         layer = getattr(inst, "layer", "") or ""
@@ -170,7 +176,7 @@ def build(scene, model, path) -> dict:
             }}
             if top:
                 report["dynamic_roots"].append(group.name)
-        kids = [place(c, inherited, depth + 1, False)
+        kids = [place(c, None, depth + 1, False)
                 for c in getattr(defn, "instances", []) or []]
         group.adopt([k for k in kids if k is not None])
         return group

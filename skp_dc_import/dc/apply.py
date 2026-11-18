@@ -120,10 +120,23 @@ def _value_for_store(v):
     return n if isinstance(n, float) else ("" if v is None else str(v))
 
 
-def redraw_group(root_group, options: dict | None = None):
+def _material_attrs(scene, name):
+    """The paint for a part whose Material attribute names ``name``: the
+    document's material of that name (case-insensitive), else None."""
+    registry = getattr(scene, "materials", None) or {}
+    want = str(name).strip().lower()
+    for key, mat in registry.items():
+        if str(key).strip().lower() == want:
+            attrs = getattr(mat, "face_attrs", None)
+            return attrs() if callable(attrs) else None
+    return None
+
+
+def redraw_group(root_group, options: dict | None = None, scene=None):
     """A new group tree for ``root_group`` redrawn with ``options``
     ({attribute: value}, lengths in INCHES as SketchUp stores them; LenX,
-    LenY, LenZ resize the component). Returns (new root group, evaluator)."""
+    LenY, LenZ resize the component). ``scene`` resolves Material values
+    to the document's materials. Returns (new root group, evaluator)."""
     from PySide6.QtGui import QMatrix4x4
     from core.group import Group, transformed_mesh
 
@@ -147,6 +160,12 @@ def redraw_group(root_group, options: dict | None = None):
                 setattr(g, attr, _copy.deepcopy(getattr(tmpl, attr)))
         g.component = tmpl.component
         g.hidden = bool(node.hidden)
+        if node.material and scene is not None:
+            # A Material formula paints the part, as SketchUp paints the
+            # instance: faces left with the default material show it.
+            paint = _material_attrs(scene, node.material)
+            if paint is not None:
+                g.material = paint
         if node.xform is not None:
             g.xform = _q_from_rows(node.xform)
         cs = node.content_scale

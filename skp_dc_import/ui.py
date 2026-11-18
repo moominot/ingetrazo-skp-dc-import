@@ -38,7 +38,7 @@ def redraw_in_document(viewport, group, options: dict):
     box = {}
 
     def mutate(scene):
-        new, ev = A.redraw_group(group, options)
+        new, ev = A.redraw_group(group, options, scene)
         i = scene.groups.index(group)
         scene.groups[i] = new
         scene.selection.discard(group)
