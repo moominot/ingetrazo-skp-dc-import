@@ -60,6 +60,49 @@ def _mesh_from(faces, soft_edges, loose_edges):
     return mesh
 
 
+class _FrontUnpainted:
+    """A face seen as unpainted on its back, for IngeTrazo's face adapter
+    (which otherwise turns a front-unpainted, back-painted face round)."""
+
+    __slots__ = ("_face",)
+
+    def __init__(self, face):
+        self._face = face
+
+    def __getattr__(self, name):
+        if name == "back_material_id":
+            return None
+        return getattr(self._face, name)
+
+
+def _sketchup_sided_faces(so, defn, identity, attr_map):
+    """A definition's own faces with SketchUp's two-sided paint: a face
+    unpainted on its FRONT keeps that side unpainted (it shows the part's
+    paint, which a Material formula sets) and its painted back travels as
+    ``attrs["back"]``. IngeTrazo's import instead turns such a face round so
+    its painted back fronts, which hides the part's paint: right for plain
+    models, wrong for a part whose material a formula drives."""
+    pos_m, raw_l, meta = so._defn_geom(defn)
+    out = []
+    if not meta:
+        return out
+    wl = so._world_points(pos_m, identity)
+    for face, s0, s1, hs in meta:
+        back = attr_map.get(getattr(face, "back_material_id", None))
+        special = getattr(face, "material_id", None) is None and back is not None
+        entry = so._face_entry(_FrontUnpainted(face) if special else face,
+                               wl, raw_l, s0, s1, hs, attr_map, None, None, False)
+        if entry is None:
+            continue
+        if special:
+            outer, holes, attrs = entry
+            attrs = dict(attrs or {})
+            attrs["back"] = dict(back)
+            entry = (outer, holes, attrs)
+        out.append(entry)
+    return out
+
+
 def _register_materials(scene, materials, attr_map) -> None:
     """The file's named materials into the scene registry; a name taken by a
     different recipe lands as «name (2)» and the shared face attrs follow."""
@@ -125,15 +168,18 @@ def build(scene, model, path) -> dict:
     report = {"placements": 0, "dynamic": 0, "definitions": set(),
               "dynamic_roots": [], "faces": 0}
 
-    def mesh_for(defn, inherited):
-        key = (id(defn), inherited)
+    def mesh_for(defn, inherited, painted_by_formula=False):
+        key = (id(defn), inherited, painted_by_formula)
         mesh = meshes.get(key)
         if mesh is None:
             faces, soft, loose = [], [], []
-            # by_id={} : only THIS definition's faces; its instances are
-            # placed as children instead of being flattened in.
-            so._collect(defn, identity, {}, attr_map, faces, 0, frozenset(),
-                        inherited=inherited)
+            if painted_by_formula:
+                faces = _sketchup_sided_faces(so, defn, identity, attr_map)
+            else:
+                # by_id={} : only THIS definition's faces; its instances
+                # are placed as children instead of being flattened in.
+                so._collect(defn, identity, {}, attr_map, faces, 0, frozenset(),
+                            inherited=inherited)
             so._soft_edge_segments(defn, identity, soft)
             so._loose_edge_segments(defn, identity, loose)
             mesh = _mesh_from(faces, soft, loose)
@@ -149,7 +195,11 @@ def build(scene, model, path) -> dict:
         # shows a container's paint on every unpainted face below it), so a
         # Material formula that repaints the part shows; the faces are not
         # baked with it, and every placement shares one mesh.
-        group = Group(mesh_for(defn, None),
+        definition_da = reader.dynamic_attributes(defn)
+        instance_da = reader.dynamic_attributes(inst)
+        painted = bool(str(instance_da.get("_material_formula") or
+                           definition_da.get("_material_formula") or "").strip())
+        group = Group(mesh_for(defn, None, painted),
                       name=getattr(inst, "name", "") or getattr(defn, "name", "") or None)
         mid = getattr(inst, "material_id", None)
         if mid is not None and attr_map.get(mid):
@@ -160,8 +210,6 @@ def build(scene, model, path) -> dict:
         if layer and layer != "Layer0":
             group.layer = layer
         group.hidden = bool(getattr(inst, "hidden", False))
-        definition_da = reader.dynamic_attributes(defn)
-        instance_da = reader.dynamic_attributes(inst)
         report["placements"] += 1
         report["definitions"].add(id(defn))
         if definition_da or instance_da:
