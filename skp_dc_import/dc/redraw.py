@@ -174,9 +174,7 @@ def redraw(root: Part, overrides: dict | None = None):
     """Evaluate ``root`` (with ``overrides``: {(part, attr): value in
     SketchUp's stored units}) → (the root's :class:`Placed`, evaluator)."""
     ov = {(id(p), a.lower()): v for (p, a), v in (overrides or {}).items()}
-    # A part redrawn inside its component keeps its parent: Parent!LenX
-    # and its ancestors' and siblings' names resolve (see part_in_context).
-    root_twin = clone(root, root.parent, _copy_index(root))
+    root_twin = clone(root, None, _copy_index(root))
     # Overrides were given on the file's parts: carry them to the twins.
     by_source = {}
     for t in root_twin.walk():

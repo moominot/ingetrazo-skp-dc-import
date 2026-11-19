@@ -56,10 +56,9 @@ def _merged(group) -> dict:
     return attrs
 
 
-def _bounds(group, visible_only: bool, start=None):
+def _bounds(group, visible_only: bool):
     """The group's own frame bounds (metres): its mesh and, for a part with
-    sub-parts, theirs (skipping hidden ones when asked). ``start`` maps what
-    the group holds into its own frame (an open group holds it in world)."""
+    sub-parts, theirs (skipping hidden ones when asked)."""
     lo = [float("inf")] * 3
     hi = [float("-inf")] * 3
 
@@ -78,7 +77,7 @@ def _bounds(group, visible_only: bool, start=None):
             cm = c.xform if m is None else m * c.xform
             walk(c, cm)
 
-    walk(group, start)
+    walk(group, None)
     if lo[0] == float("inf"):
         return (0.0, 0.0, 0.0)
     return tuple((hi[i] - lo[i]) / M_PER_IN for i in range(3))
@@ -113,68 +112,6 @@ def part_tree(group, parent: Part | None = None, edits: dict | None = None) -> P
 def is_dynamic_root(group) -> bool:
     data = (group.ext or {}).get(KEY)
     return bool(data and (data.get("definition_attributes") or data.get("instance_attributes")))
-
-
-def _strip_formulas(part: Part) -> None:
-    """The part reads its CURRENT values: no formula of its own is
-    evaluated again (what SketchUp does with a redrawn part's parent)."""
-    part.attrs = {k: v for k, v in part.attrs.items()
-                  if not (k.startswith("_") and k.endswith("_formula"))}
-
-
-def part_in_context(scene, group, edits: dict | None = None):
-    """``group``'s Part, with the dynamic component around it when it is a
-    part of an OPEN group that is (or sits in) a dynamic component — a
-    cabinet inside an open kitchen, a shelf inside an open cabinet — so
-    ``Parent!LenX`` and the names of its parent, ancestors and siblings
-    resolve as SketchUp resolves them. Returns ``(part, frame)``: ``frame``
-    is the open parent's world matrix (QMatrix4x4) that the part's local
-    placement is read in and written back with; ``None`` when ``group`` is
-    not in such a context (then ``part`` is plain :func:`part_tree`).
-
-    Opening a group pushes its matrix into what it holds (the tools speak
-    world coordinates), so each open level's placement is read back from
-    the frame it had when it was opened. The parts around ``group`` keep
-    their current values: only ``group``'s own formulas are evaluated."""
-    stack = list(getattr(scene, "_edit_stack", None) or ()) if scene is not None else []
-    if not stack or not any(c is group for c in (stack[-1]["group"].children or ())):
-        return part_tree(group, None, edits), None
-    levels = [lv["group"] for lv in stack]
-    k = next((i for i, g in enumerate(levels) if is_dynamic_root(g)), None)
-    if k is None:
-        return part_tree(group, None, edits), None
-    from PySide6.QtGui import QMatrix4x4
-
-    def frame_of(i):
-        f = stack[i].get("frame") if levels[i].xform is not None else None
-        return QMatrix4x4(f) if f is not None else QMatrix4x4()
-
-    def inverse(m):
-        inv, ok = m.inverted()
-        return inv if ok else QMatrix4x4()
-
-    top = part_tree(levels[k], None, edits)
-    frames = [frame_of(i) for i in range(len(levels))]
-    parts = [top]
-    for i in range(k + 1, len(levels)):
-        parts.append(next(p for p in parts[-1].children if p.handle is levels[i]))
-    for j, (part, i) in enumerate(zip(parts, range(k, len(levels)))):
-        # This open level: its placement in its parent, its size in its frame.
-        rel = frames[i] if i == 0 else inverse(frames[i - 1]) * frames[i]
-        part.xform = _rows_from_q(rel)
-        inv = inverse(frames[i])
-        part.base = _bounds(levels[i], bool(levels[i].children), inv)
-        # What it holds was pushed into world: back to its frame.
-        nxt = parts[j + 1].handle if j + 1 < len(parts) else None
-        for c in part.children:
-            if c.handle is not nxt and c.handle.xform is not None:
-                c.xform = _rows_from_q(inv * c.handle.xform)
-    target = next(p for p in parts[-1].children if p.handle is group)
-    inside = {id(p) for p in target.walk()}
-    for p in top.walk():
-        if id(p) not in inside:
-            _strip_formulas(p)
-    return target, frames[-1]
 
 
 # ---- options -------------------------------------------------------------------
@@ -232,7 +169,7 @@ def redraw_group(root_group, options: dict | None = None, scene=None, edits=None
 
     from .author import apply_changes, new_dynamic_data
     edits = edits or {}
-    root, frame = part_in_context(scene, root_group, edits)
+    root = part_tree(root_group, None, edits)
     overrides = {}
     for k, v in (options or {}).items():
         k = k.lower()
@@ -297,10 +234,7 @@ def redraw_group(root_group, options: dict | None = None, scene=None, edits=None
             g.xform = _q_from_rows(node.xform)
         return g
 
-    new = build(placed, is_root=True)
-    if frame is not None and new.xform is not None:
-        new.xform = frame * new.xform          # back to where the tools work
-    return new, ev
+    return build(placed, is_root=True), ev
 
 
 def _attrs_to_store(part: Part, ev):
