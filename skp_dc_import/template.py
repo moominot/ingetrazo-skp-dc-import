@@ -89,7 +89,18 @@ def check(path=None) -> tuple[str, str]:
     return OK, f"Ready: {p}"
 
 
+def bundled_path() -> Path:
+    """Where a build that ships the template carries it (the vendored
+    OpenSKP loads it from here by itself)."""
+    return Path(__file__).parent / "_vendor" / "openskp" / "_scaffold" / FILE_NAME
+
+
 def status() -> tuple[str, str]:
+    bundled = bundled_path()
+    if bundled.is_file():
+        state, msg = check(bundled)
+        if state == OK:
+            return OK, f"Included with this build: {bundled}"
     return check()
 
 
@@ -98,6 +109,8 @@ def apply() -> bool:
     state, _ = status()
     if state != OK:
         return False
+    if bundled_path().is_file() and check(bundled_path())[0] == OK:
+        return True   # the vendored OpenSKP finds it by itself
     import importlib
     # not `from … import create`: the package re-exports a function by that name
     mod = importlib.import_module("._vendor.openskp.create", __package__)
