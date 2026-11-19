@@ -16,7 +16,7 @@ import copy as _copy
 import re
 
 from .evaluate import _num
-from .model import Part, part_name
+from .model import Part, part_aliases, part_name
 from .redraw import LEN, decompose, live_value, redraw
 
 KEY = "skp_dc_import"
@@ -100,6 +100,7 @@ def part_tree(group, parent: Part | None = None, edits: dict | None = None) -> P
             attrs[k] = v
     data = (group.ext or {}).get(KEY) or {}
     part = Part(part_name(attrs, group.name), attrs, parent, [], group)
+    part.aliases = part_aliases(part.name, group.name)
     # A classic group (no matrix: its mesh in its parent's frame) reads as
     # placed at the identity; it is written back as such an instance.
     part.xform = (_rows_from_q(group.xform) if group.xform is not None

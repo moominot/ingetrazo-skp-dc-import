@@ -176,8 +176,17 @@ class OptionsPanel(QWidget):
         self.revert_btn.setEnabled(on)
 
     def _clear(self):
+        # Taken out of the form now, deleted once control is back in the
+        # event loop: the row being cleared may be the very field whose
+        # Enter key is still being handled (removeRow deleted it under
+        # Qt's feet — an access violation, or a hang).
         while self.form.rowCount():
-            self.form.removeRow(0)
+            taken = self.form.takeRow(0)
+            for item in (taken.labelItem, taken.fieldItem):
+                w = item.widget() if item is not None else None
+                if w is not None:
+                    w.hide()            # still owned by the form host until then
+                    w.deleteLater()
         self.rows = []
 
     def show_group(self, group, force=False):
@@ -218,7 +227,9 @@ class OptionsPanel(QWidget):
                 initial = None
             else:
                 w = QLineEdit(O.display(opt))
-                w.returnPressed.connect(self.apply)
+                # After the key press is done with this field: applying
+                # rebuilds the form, this field included.
+                w.returnPressed.connect(lambda: QTimer.singleShot(0, self.apply))
                 initial = w.text()
             label = QLabel(opt.label)
             label.setWordWrap(True)

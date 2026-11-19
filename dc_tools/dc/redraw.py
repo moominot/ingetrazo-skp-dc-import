@@ -111,6 +111,7 @@ def clone(part: Part, parent: Part | None, copy: int) -> Part:
     attrs["copy"] = float(copy)
     twin = Part(part.name, attrs, parent, [], part.handle)
     twin.xform, twin.base, twin.definition = part.xform, part.base, part.definition
+    twin.aliases = part.aliases
     twin.source = part.source or part
     twin.children = [clone(c, twin, _copy_index(c)) for c in part.children]
     return twin

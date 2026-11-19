@@ -51,22 +51,26 @@ class Evaluator:
             return part
         if owner == "parent":
             return part.parent
-        def named(p):
-            return p is not None and p.name.lower() == owner
-        if named(part):
-            return part
-        p = part.parent
-        while p is not None:                        # ancestors
-            if named(p):
-                return p
-            p = p.parent
-        if part.parent is not None:                 # siblings
-            for s in part.parent.children:
-                if named(s):
-                    return s
-        for c in part.children:                     # children
-            if named(c):
-                return c
+        # A part's own name first; then, in the same scope, the placement
+        # name it carries besides (see Part.aliases): «MUNT07» still finds
+        # the part named so before another placed as «MUNT1» of the same
+        # definition.
+        for named in (lambda p: p is not None and p.name.lower() == owner,
+                      lambda p: p is not None and owner in p.aliases):
+            if named(part):
+                return part
+            p = part.parent
+            while p is not None:                    # ancestors
+                if named(p):
+                    return p
+                p = p.parent
+            if part.parent is not None:             # siblings
+                for s in part.parent.children:
+                    if named(s):
+                        return s
+            for c in part.children:                 # children
+                if named(c):
+                    return c
         # Nothing further: SketchUp itself fails on a name out of this scope
         # («failed to parse march sup!leny inside Group.leny») and leaves the
         # attribute as it was.
