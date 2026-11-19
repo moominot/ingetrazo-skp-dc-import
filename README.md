@@ -28,7 +28,7 @@ components and export it back.
 ## Dynamic components (`dc_tools`)
 
 - **Component Options**: the options a component shows its users (text fields, lists,
-  read-only values, in their units). **Apply** redraws it: copies, hidden parts, sizes,
+  read-only values, in their units). Its **?** button opens the help at the Options section. **Apply** redraws it: copies, hidden parts, sizes,
   positions, rotations and materials, as SketchUp would. Changing LenX/LenY/LenZ resizes it the
   way SketchUp's dialog does.
 - **Component Attributes**: **Make dynamic**, then per part: attributes with a value or a
@@ -37,7 +37,7 @@ components and export it back.
   opens a help window: how the panel works, what each predefined attribute does, how to write
   formulas and every function with its syntax and an example.
 
-Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.2.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.3.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 

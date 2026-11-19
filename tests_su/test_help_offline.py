@@ -7,7 +7,7 @@ PNG = sys.argv[3] if len(sys.argv) > 3 else None
 sys.path[:0] = [SRC, EXT]
 from PySide6.QtWidgets import QApplication
 qa = QApplication.instance() or QApplication([])
-from dc_tools import help_text, ui_author
+from dc_tools import help_text, ui_author, ui, ui_help
 from dc_tools.dc import formula as F
 from dc_tools.dc import author as AU
 
@@ -49,9 +49,19 @@ class App: pass
 panel = ui_author.AttributesPanel(App())
 ok(panel.help_btn.text() == "?" and panel.help_btn.toolTip(), "panel has a ? button with a tooltip")
 panel.help_btn.click(); qa.processEvents()
-dlg = panel._help
-ok(dlg.isVisible() and "Functions" in dlg.view.toPlainText() and "ROUND" in dlg.view.toPlainText(), "the button opens the help")
-panel.help_btn.click(); ok(panel._help is dlg, "reuses the same window")
+dlg = ui_help._dialog
+ok(dlg is not None and dlg.isVisible() and "Functions" in dlg.view.toPlainText() and "ROUND" in dlg.view.toPlainText(), "the button opens the help")
+sb = dlg.view.verticalScrollBar()
+attr_pos = sb.value()
+ok(attr_pos > 0, f"the attributes button scrolls to its section ({attr_pos})")
+panel.help_btn.click(); ok(ui_help._dialog is dlg, "reuses the same window")
+opts = ui.OptionsPanel(App())
+ok(opts.help_btn.text() == "?" and opts.help_btn.toolTip(), "Component Options panel has a ? button")
+opts.help_btn.click(); qa.processEvents()
+ok(ui_help._dialog is dlg and sb.value() < attr_pos, "its button opens the same window at the options section (above attributes)")
+page = help_text.html()
+ok('name="options"' in page and page.index('name="options"') < page.index('name="attributes"'), "both anchors present, options first")
+ok(all(w in page for w in ("Apply", "Revert", "Text box", "List", "Read-only", "one undo step")), "options help names every control")
 dlg.find.setText("CHOOSE"); qa.processEvents()
 ok(dlg.view.textCursor().selectedText().lower() == "choose", "search finds the word (any case)")
 if PNG:

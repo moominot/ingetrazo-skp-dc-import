@@ -95,6 +95,43 @@ def html() -> str:
     pre = "".join(f"<tr><td valign='top'><b>{escape(n)}</b></td><td valign='top'>{t}</td></tr>"
                   for n, t in PREDEFINED)
     return f"""
+<a name="options"></a>
+<h3>Component Options: how it works</h3>
+<p>A <b>dynamic component</b> shows its users a few <b>options</b>: the number of shelves, the width, a door
+type… This panel is where they change them. When you apply, the component is <b>redrawn</b> as SketchUp's Dynamic
+Components would: copies, hidden parts, sizes, positions, rotations and materials are recomputed from the options
+and the formulas. The options come from the component's author: a component imported from SketchUp brings its own, and
+one made here gets them in <i>Component Attributes ▸ Options…</i>.</p>
+
+<h4>How to use it</h4>
+<ol>
+<li><b>Select</b> a dynamic component in the drawing. The panel follows the selection; its title shows the
+component's name and how many options it has. (If the title asks you to select one, the selection is not a dynamic
+component.)</li>
+<li><b>Change</b> the options you want (see below).</li>
+<li>Press <b>Apply</b> (or Enter in a text box). The component is redrawn, as <b>one undo step</b>.</li>
+</ol>
+
+<h4>The panel</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>Text box</b></td><td>An option you type: a number (in the option's own units, such as cm) or
+a text. A value that is not a number is reported and nothing is applied.</td></tr>
+<tr><td valign='top'><b>List</b></td><td>An option you pick from a drop-down list. A choice may carry a formula, which
+is worked out when you apply.</td></tr>
+<tr><td valign='top'><b>Read-only value</b></td><td>An option the author lets you see but not change (a computed price
+or size, for example). It is shown as text.</td></tr>
+<tr><td valign='top'><b>Apply</b></td><td>Redraws the component with the options you changed (only those are sent).
+One undo step.</td></tr>
+<tr><td valign='top'><b>Revert</b></td><td>Puts back the values the component has now, discarding what you typed.</td></tr>
+<tr><td valign='top'><b>Message line</b></td><td>Under the buttons. <i>Redrawn</i> when it worked. If some formulas could not
+be evaluated it says so: those attributes keep their value, as in SketchUp.</td></tr>
+</table>
+<p><b>Sizes.</b> If an option is LenX, LenY or LenZ, changing it resizes the component the way SketchUp's dialog does:
+the part is stretched and what it holds follows, then the formulas of its sub-parts set what they control.</p>
+<p>Open the panel from <b>Extensions ▸ Dynamic component options…</b>, from the toolbar, or from the right-click menu
+of a dynamic component.</p>
+
+<a name="attributes"></a>
 <h3>Component Attributes: how it works</h3>
 <p>A <b>dynamic component</b> is a component whose size, position, copies, visibility or material are
 <i>computed</i> from attributes and formulas, the way SketchUp's Dynamic Components do it. This panel is where you

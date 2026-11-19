@@ -7,7 +7,7 @@ import logging
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
-                               QLineEdit, QPushButton, QScrollArea, QVBoxLayout,
+                               QLineEdit, QPushButton, QScrollArea, QToolButton, QVBoxLayout,
                                QWidget)
 
 from .dc import apply as A
@@ -107,8 +107,13 @@ class OptionsPanel(QWidget):
         self.revert_btn = QPushButton("Revert")
         self.revert_btn.setToolTip("Put back the values the component has now")
         self.revert_btn.clicked.connect(lambda: self.show_group(self.group, force=True))
+        self.help_btn = QToolButton()
+        self.help_btn.setText("?")
+        self.help_btn.setToolTip("How Component Options works, and what each control does")
+        self.help_btn.clicked.connect(self.show_help)
         buttons.addWidget(self.apply_btn)
         buttons.addWidget(self.revert_btn)
+        buttons.addWidget(self.help_btn)
         outer.addLayout(buttons)
         self.status = QLabel("")
         self.status.setWordWrap(True)
@@ -118,6 +123,11 @@ class OptionsPanel(QWidget):
         self.timer.setInterval(400)
         self.timer.timeout.connect(self._poll)
         self.timer.start()
+
+    def show_help(self):
+        """The «?» button: the shared help window, at this panel's section."""
+        from . import ui_help
+        ui_help.show(self.window(), "options")
 
     # -- following the selection ------------------------------------------------
     def _poll(self):

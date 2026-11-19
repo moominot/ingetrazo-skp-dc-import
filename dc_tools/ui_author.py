@@ -233,14 +233,9 @@ class AttributesPanel(QWidget):
         self._refresh_enabled()
 
     def show_help(self):
-        """The «?» button: a window of its own (non-modal, reused)."""
-        from .ui_help import HelpDialog
-        dlg = getattr(self, "_help", None)
-        if dlg is None:
-            dlg = self._help = HelpDialog(self.window())
-        dlg.show()
-        dlg.raise_()
-        dlg.activateWindow()
+        """The «?» button: the shared help window, at this panel's section."""
+        from . import ui_help
+        ui_help.show(self.window(), "attributes")
 
     # -- selection -------------------------------------------------------------
     def _poll(self):

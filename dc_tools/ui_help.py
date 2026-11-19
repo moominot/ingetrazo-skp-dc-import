@@ -24,6 +24,10 @@ class HelpDialog(QDialog):
         self.view.setHtml(help_text.html())
         lay.addWidget(self.view)
 
+    def goto(self, anchor: str) -> None:
+        """Scroll to a section: «options» or «attributes»."""
+        self.view.scrollToAnchor(anchor or "options")
+
     def _find_next(self, restart: bool = False):
         text = self.find.text()
         if restart:
@@ -35,3 +39,18 @@ class HelpDialog(QDialog):
             cur.setPosition(0)
             self.view.setTextCursor(cur)
             self.view.find(text)
+
+
+_dialog = None
+
+
+def show(parent=None, anchor: str = "options") -> HelpDialog:
+    """The shared, non-modal help window, scrolled to ``anchor``."""
+    global _dialog
+    if _dialog is None:
+        _dialog = HelpDialog(parent)
+    _dialog.show()
+    _dialog.goto(anchor)
+    _dialog.raise_()
+    _dialog.activateWindow()
+    return _dialog
