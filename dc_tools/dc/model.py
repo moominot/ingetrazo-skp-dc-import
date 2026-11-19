@@ -11,6 +11,7 @@ Lengths in these dictionaries are always INCHES, whatever the component's
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 # Attributes every part has (SketchUp's "predefined" attributes).
@@ -36,6 +37,10 @@ class Part:
     base: tuple | None = None                 # the definition's natural size, inches
     definition: str = ""                      # the definition's name (tells copies apart)
     source: "Part | None" = None              # for an evaluation twin: the file's part
+    #: Other names formulas reach this part by: the placement's own name
+    #: when ``_name`` says something else (a part placed as «MUNT1» whose
+    #: definition is named «MUNT07» answers to both, as in SketchUp).
+    aliases: tuple = ()
 
     # -- the dictionary ----------------------------------------------------
     def stored(self, attr: str):
@@ -100,12 +105,20 @@ def part_name(attrs: dict, fallback: str) -> str:
     return str(attrs.get("_name") or fallback or "")
 
 
+def part_aliases(name: str, placement_name: str | None) -> tuple:
+    """The placement's own name (without SketchUp's « copy NNN»), when it
+    differs from the part's name."""
+    own = re.sub(r" copy \d+$", "", str(placement_name or "")).strip()
+    return (own.lower(),) if own and own.lower() != str(name).lower() else ()
+
+
 def build(node, attrs_of, name_of, children_of, parent=None) -> Part:
     """A Part tree from any tree (SketchUp dump, IngeTrazo groups):
     ``attrs_of(node)`` gives the merged dictionary, ``name_of(node)`` the
     placement's own name, ``children_of(node)`` its sub-placements."""
     attrs = attrs_of(node)
     part = Part(part_name(attrs, name_of(node)), attrs, parent, [], node)
+    part.aliases = part_aliases(part.name, name_of(node))
     part.children = [build(c, attrs_of, name_of, children_of, part)
                      for c in children_of(node)]
     return part
