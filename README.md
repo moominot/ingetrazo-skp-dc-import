@@ -13,8 +13,12 @@ components** in, use them, and make new ones, with the same rules SketchUp follo
 - **Component Attributes**: **Make dynamic**, then per part: attributes with a value or a
   `=formula`, the predefined ones (X, Y, Z, LenX…, RotX…, Hidden, Material, Copies…) or your
   own, and how each one shows to users (label, access, units, list choices).
+- **Export SketchUp (.skp) with dynamic components…** writes the document as a `.skp`
+  (SketchUp 2017 format, which every later SketchUp opens) with its groups, components,
+  materials and textures, and each part's Dynamic Components data: the components work as
+  dynamic components in SketchUp, with their options.
 
-Every change is one undo step. Version 0.2.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Version 0.3.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
@@ -51,10 +55,29 @@ difference: a stair landing's base, which SketchUp leaves unstretched when the s
 included), except `test_author_offline.py`, whose cabinet is built the same way in both
 programs.
 
+## Export to SketchUp
+
+`skp_dc_import/skp_export.py` is IngeTrazo's own `.skp` writer (`formats/skp_out.py`,
+GPL-3.0), which IngeTrazo no longer ships enabled, adapted for dynamic components: every
+definition carries its `dynamic_attributes` and every placement its own; hidden parts are
+written hidden instead of left out; a part's nominal size goes on its definition and copies
+are named «name copy 001», which is how SketchUp's Dynamic Components read them.
+
+Checked by opening the exports in SketchUp 2026: four real components came back with every
+attribute value and hidden flag identical, and, redrawn by SketchUp's own engine with options
+changed, identical to the originals part by part; a cabinet made in IngeTrazo works in
+SketchUp's Component Options (shelves 3 → 5 → 2 → 4).
+
+**About the template.** OpenSKP's writer builds every `.skp` from a blank document,
+`_vendor/openskp/_scaffold/blank_v17.skp`, whose bytes came from Trimble's SketchUp SDK
+(OpenSKP explains it in `create.py`: SketchUp's empty-document boilerplate, no one's creative
+work). IngeTrazo stopped distributing it to ship only free pieces, and turned its `.skp`
+export off for that reason. This extension carries it to be able to export; remove the
+`_scaffold` folder if you want the extension without it (export then fails, import keeps
+working).
+
 ## Limits
 
-- One way: components made or changed here are not written back to SketchUp as dynamic
-  components (IngeTrazo's `.skp` export is off).
 - Not supported: OnClick and animations, `FACEAREA`-style geometry functions, and the
   functions the formula interpreter lacks (see `skp_dc_import/dc/formula.py`).
 
@@ -74,5 +97,7 @@ GPL-3.0-or-later.
 - The formula interpreter (`dc/formula.py`, `dc/messages.py`) comes from d1rty-pixel's
   [Dynamic Components for IngeTrazo](https://github.com/d1rty-pixel/ingetrazo-dynamic-components)
   (GPL-3.0), extended here.
+- The `.skp` writer is IngeTrazo's `formats/skp_out.py` (GPL-3.0, © Marco Sumari Tellez and
+  IngeTrazo contributors), adapted.
 - The vendored OpenSKP keeps its MIT licence (`_vendor/openskp/LICENSE`).
 - Faces, materials and textures are read with IngeTrazo's own `.skp` adapter.

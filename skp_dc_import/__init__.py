@@ -11,7 +11,7 @@ makes components dynamic and edits their attributes and formulas.
 """
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 import logging
 from pathlib import Path
@@ -78,6 +78,32 @@ def setup(app):
         "Import SketchUp keeping components…", ask,
         tip="Import a .skp keeping its components nested, with their "
             "SketchUp Dynamic Components attributes.")
+
+    def export_skp():
+        from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
+        from PySide6.QtCore import Qt
+        title = "Export SketchUp (.skp) with dynamic components"
+        path, _ = QFileDialog.getSaveFileName(app.window, title, "", "SketchUp (*.skp)")
+        if not path:
+            return
+        if not path.lower().endswith(".skp"):
+            path += ".skp"
+        from . import skp_export
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            skp_export.save_skp(app.viewport.scene, path)
+        except Exception as exc:  # noqa: BLE001 - say it, never crash the app
+            _log.exception("export to %s failed", path)
+            QApplication.restoreOverrideCursor()
+            QMessageBox.warning(app.window, title, f"Could not export:\n{exc}")
+            return
+        QApplication.restoreOverrideCursor()
+        app.viewport.flash_status(f"Exported {Path(path).name} (SketchUp 2017 format).", 5000)
+
+    app.add_menu_action(
+        "Export SketchUp (.skp) with dynamic components…", export_skp,
+        tip="Write the document as a .skp (SketchUp 2017 format) with groups, "
+            "components and their Dynamic Components attributes.")
 
     # Component Options: a side-tray tab that follows the selection.
     from .ui import OptionsPanel, selected_root

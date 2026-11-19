@@ -13,6 +13,7 @@ Units: IngeTrazo works in metres, SketchUp's dictionaries in inches.
 from __future__ import annotations
 
 import copy as _copy
+import re
 
 from .evaluate import _num
 from .model import Part, part_name
@@ -130,6 +131,15 @@ def resize_root(root: Part, axis: str, value_in: float) -> None:
 
 # ---- back to groups --------------------------------------------------------------
 
+def copy_name(name: str | None, copy: int) -> str | None:
+    """SketchUp's name for Copy ``copy`` of a part: «shelf copy 001» (its
+    Dynamic Components tell copies from parts by that name)."""
+    if not copy:
+        return name
+    base = re.sub(r" copy \d+$", "", str(name or "")).strip() or "part"
+    return f"{base} copy {int(copy):03d}"
+
+
 def _value_for_store(v):
     n = _num(v)
     return n if isinstance(n, float) else ("" if v is None else str(v))
@@ -173,7 +183,7 @@ def redraw_group(root_group, options: dict | None = None, scene=None, edits=None
 
     def build(node, is_root=False):
         tmpl = node.source.handle                       # the group this part was read from
-        g = Group(tmpl.mesh, name=tmpl.name)
+        g = Group(tmpl.mesh, name=copy_name(tmpl.name, node.copy))
         for attr in ("layer", "ifc", "billboard", "material", "axes", "locked", "text3d"):
             if hasattr(tmpl, attr):
                 setattr(g, attr, _copy.deepcopy(getattr(tmpl, attr)))
