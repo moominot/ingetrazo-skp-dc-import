@@ -66,7 +66,7 @@ FUNCTION_NAMES = tuple(sorted(f[0] for _g, rows in FUNCTIONS for f in rows))
 PREDEFINED = (
     ("X, Y, Z", "Where the part sits, measured from its parent's origin, along each axis."),
     ("LenX, LenY, LenZ", "The size of the part along each axis. Changing them stretches the part and what it holds, "
-                         "as SketchUp does."),
+                         "the way dynamic components work."),
     ("RotX, RotY, RotZ", "Rotation of the part around each axis, in degrees."),
     ("Hidden", "The part is hidden when the value is true (TRUE or a positive number, so 1)."),
     ("Material", "The name of the material the part is painted with."),
@@ -98,9 +98,9 @@ def html() -> str:
 <a name="options"></a>
 <h3>Component Options: how it works</h3>
 <p>A <b>dynamic component</b> shows its users a few <b>options</b>: the number of shelves, the width, a door
-type… This panel is where they change them. When you apply, the component is <b>redrawn</b> as SketchUp's Dynamic
-Components would: copies, hidden parts, sizes, positions, rotations and materials are recomputed from the options
-and the formulas. The options come from the component's author: a component imported from SketchUp brings its own, and
+type… This panel is where they change them. When you apply, the component is <b>redrawn</b> following the dynamic
+component rules: copies, hidden parts, sizes, positions, rotations and materials are recomputed from the options
+and the formulas. The options come from the component's author: a component imported from a .skp file brings its own, and
 one made here gets them in <i>Component Attributes ▸ Options…</i>.</p>
 
 <h4>How to use it</h4>
@@ -124,9 +124,9 @@ or size, for example). It is shown as text.</td></tr>
 One undo step.</td></tr>
 <tr><td valign='top'><b>Revert</b></td><td>Puts back the values the component has now, discarding what you typed.</td></tr>
 <tr><td valign='top'><b>Message line</b></td><td>Under the buttons. <i>Redrawn</i> when it worked. If some formulas could not
-be evaluated it says so: those attributes keep their value, as in SketchUp.</td></tr>
+be evaluated it says so: those attributes keep their value.</td></tr>
 </table>
-<p><b>Sizes.</b> If an option is LenX, LenY or LenZ, changing it resizes the component the way SketchUp's dialog does:
+<p><b>Sizes.</b> If an option is LenX, LenY or LenZ, changing it resizes the component the way a dynamic component is resized:
 the part is stretched and what it holds follows, then the formulas of its sub-parts set what they control.</p>
 <p>Open the panel from <b>Extensions ▸ Dynamic component options…</b>, from the toolbar, or from the right-click menu
 of a dynamic component.</p>
@@ -134,9 +134,9 @@ of a dynamic component.</p>
 <a name="attributes"></a>
 <h3>Component Attributes: how it works</h3>
 <p>A <b>dynamic component</b> is a component whose size, position, copies, visibility or material are
-<i>computed</i> from attributes and formulas, the way SketchUp's Dynamic Components do it. This panel is where you
-create and edit those attributes. The data is stored in SketchUp's own format, so a component made here works in
-SketchUp (export it with the SketchUp files extension).</p>
+<i>computed</i> from attributes and formulas, the way dynamic components in .skp files are. This panel is where you
+create and edit those attributes. The data is stored in the .skp format's own way, so a component made here keeps working
+when exported to .skp (with the .skp files extension).</p>
 
 <h4>In five steps</h4>
 <ol>

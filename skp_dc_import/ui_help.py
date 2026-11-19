@@ -12,7 +12,7 @@ _dialog = None
 class HelpDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("SketchUp files: help")
+        self.setWindowTitle(".skp files: help")
         self.resize(560, 620)
         lay = QVBoxLayout(self)
         self.find = QLineEdit()

@@ -1290,7 +1290,7 @@ def save_skp(scene, path) -> None:
     from . import template
     if not template.apply():
         raise RuntimeError(template.status()[1] + ". Get it in "
-                           "Extensions ▸ SketchUp .skp settings…")
+                           "Extensions ▸ .skp settings…")
     import tempfile
     with tempfile.TemporaryDirectory(prefix="ingetrazo-skp-") as stage:
         _write_skp(scene, path, openskp, SkpWriteError, Path(stage))

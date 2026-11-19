@@ -13,14 +13,14 @@ from . import template
 _log = logging.getLogger(__name__)
 
 WHY = (
-    "<p>Writing a .skp starts from SketchUp's own empty document "
-    "(<code>blank_v17.skp</code>, 5.8 KB, made with Trimble's SDK). This "
+    "<p>Writing a .skp starts from an empty .skp document "
+    "(<code>blank_v17.skp</code>, 5.8 KB, made with the format's own SDK). This "
     "extension does <b>not</b> include it, so that only free pieces are "
     "distributed. Get it once; importing .skp files works without it.</p>"
     "<p>Either download it from the OpenSKP project (a fixed commit, checked "
     "against its SHA-256), or choose a copy you already have. Only that exact "
-    "file works: the writer depends on its bytes, so a blank file saved from "
-    "SketchUp (including SketchUp for Web) will be rejected.</p>")
+    "file works: the writer depends on its bytes, so any other blank .skp, "
+    "even an empty one saved by a modeler, will be rejected.</p>")
 
 CREDITS = (
     "<p><b>Credits.</b> Formula interpreter: d1rty-pixel, "
@@ -33,7 +33,7 @@ CREDITS = (
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("SketchUp .skp settings")
+        self.setWindowTitle(".skp settings")
         self.setMinimumWidth(480)
         lay = QVBoxLayout(self)
         self.state = QLabel()
@@ -99,7 +99,7 @@ class SettingsDialog(QDialog):
 
     def _choose(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Blank .skp (blank_v17.skp)", "", "SketchUp (*.skp)")
+            self, "Blank .skp (blank_v17.skp)", "", ".skp files (*.skp)")
         if not path:
             return
         try:

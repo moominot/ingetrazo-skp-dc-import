@@ -42,11 +42,11 @@ components and export it back.
   and edit it in place. A dynamic component inside an open dynamic component sees its parent
   (`Parent!LenX`, its ancestors' and siblings' names), as in SketchUp.
 
-Every change is one undo step. Versions: skp_dc_import 0.6.1, dc_tools 0.3.2, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.6.2, dc_tools 0.3.3, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Releases
 
-The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`), pinned by the catalog by
+The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`), pinned by the catalog by
 commit and SHA-256. They do **not** contain `blank_v17.skp` (see «SketchUp files» above). Unpack one in IngeTrazo's plugins
 folder, or install it from **Extensions ▸ Manage extensions…**.
 
