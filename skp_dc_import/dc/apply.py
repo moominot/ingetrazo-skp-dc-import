@@ -82,14 +82,29 @@ def _bounds(group, visible_only: bool):
     return tuple((hi[i] - lo[i]) / M_PER_IN for i in range(3))
 
 
-def part_tree(group, parent: Part | None = None) -> Part:
+_IDENTITY = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0],
+             [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+
+
+def part_tree(group, parent: Part | None = None, edits: dict | None = None) -> Part:
+    """The evaluator's view of ``group``'s tree. ``edits`` ({id(group): key
+    changes}, see :mod:`.author`) are applied to the attributes read."""
+    from .author import DELETE
     attrs = _merged(group)
+    for k, v in ((edits or {}).get(id(group)) or {}).items():
+        if v is DELETE:
+            attrs.pop(k, None)
+        else:
+            attrs[k] = v
     data = (group.ext or {}).get(KEY) or {}
     part = Part(part_name(attrs, group.name), attrs, parent, [], group)
-    part.xform = _rows_from_q(group.xform) if group.xform is not None else None
+    # A classic group (no matrix: its mesh in its parent's frame) reads as
+    # placed at the identity; it is written back as such an instance.
+    part.xform = (_rows_from_q(group.xform) if group.xform is not None
+                  else [row[:] for row in _IDENTITY])
     part.base = _bounds(group, visible_only=bool(group.children))
     part.definition = data.get("definition") or group.name or ""
-    part.children = [part_tree(c, part) for c in (group.children or ())]
+    part.children = [part_tree(c, part, edits) for c in (group.children or ())]
     return part
 
 
@@ -132,15 +147,19 @@ def _material_attrs(scene, name):
     return None
 
 
-def redraw_group(root_group, options: dict | None = None, scene=None):
+def redraw_group(root_group, options: dict | None = None, scene=None, edits=None):
     """A new group tree for ``root_group`` redrawn with ``options``
     ({attribute: value}, lengths in INCHES as SketchUp stores them; LenX,
     LenY, LenZ resize the component). ``scene`` resolves Material values
-    to the document's materials. Returns (new root group, evaluator)."""
+    to the document's materials. ``edits`` ({id(group): key changes}) are
+    authoring changes to parts of the tree (see :mod:`.author`), written
+    into the new tree. Returns (new root group, evaluator)."""
     from PySide6.QtGui import QMatrix4x4
     from core.group import Group, transformed_mesh
 
-    root = part_tree(root_group)
+    from .author import apply_changes, new_dynamic_data
+    edits = edits or {}
+    root = part_tree(root_group, None, edits)
     overrides = {}
     for k, v in (options or {}).items():
         k = k.lower()
@@ -177,6 +196,12 @@ def redraw_group(root_group, options: dict | None = None, scene=None):
             g.mesh = transformed_mesh(tmpl.mesh, s)
         ext = _copy.deepcopy(tmpl.ext) if tmpl.ext else {}
         data = ext.get(KEY)
+        changes = edits.get(id(tmpl))
+        if changes:
+            if data is None:          # a plain part gets its first attribute
+                data = ext[KEY] = new_dynamic_data(tmpl.name or "")
+                data["instance_attributes"].pop("_lengthunits", None)
+            apply_changes(data, changes)
         if data is not None:
             inst = data.setdefault("instance_attributes", {})
             part = node.part
@@ -211,3 +236,65 @@ def _attrs_to_store(part: Part, ev):
             if str(part.attrs[k] or "").strip():
                 names.add(k[1:-8])
     return sorted(names)
+
+
+# ---- making a component dynamic ---------------------------------------------------
+
+def _clone(g):
+    """A new group sharing ``g``'s mesh, with copies of its properties and
+    of its sub-tree (so the swap is one clean undo step)."""
+    from core.group import Group
+    n = Group(g.mesh, name=g.name)
+    for attr in ("layer", "ifc", "billboard", "material", "axes", "locked",
+                 "text3d", "hidden", "component", "xform", "ext"):
+        if hasattr(g, attr):
+            v = getattr(g, attr)
+            if attr == "xform" and v is not None:
+                from PySide6.QtGui import QMatrix4x4
+                v = QMatrix4x4(v)
+            else:
+                v = _copy.deepcopy(v) if attr in ("ext", "material", "ifc", "axes") else v
+            setattr(n, attr, v)
+    n.adopt([_clone(c) for c in (g.children or ())])
+    return n
+
+
+def make_dynamic_tree(group, name: str | None = None, units: str = "CENTIMETERS"):
+    """A copy of ``group`` that is a dynamic component (SketchUp's
+    «Make dynamic»), to swap in for it. A classic group gets its axes at its
+    bounding box's lower corner first, as a SketchUp component has them, so
+    LenX/LenY/LenZ stretch it from there."""
+    from PySide6.QtGui import QMatrix4x4, QVector3D
+    from core.group import transformed_mesh
+    from .author import new_dynamic_data
+    new = _clone(group)
+    if group.xform is None:
+        lo = [float("inf")] * 3
+
+        def walk(g, m):
+            for v in g.mesh.vertices:
+                p = getattr(v, "position", v)
+                p = m.map(p) if m is not None else p
+                for i, c in enumerate((p.x(), p.y(), p.z())):
+                    lo[i] = min(lo[i], c)
+            for c in g.children or ():
+                walk(c, c.xform if m is None else m * c.xform)
+
+        walk(group, None)
+        if lo[0] != float("inf"):
+            to_corner, back = QMatrix4x4(), QMatrix4x4()
+            to_corner.translate(QVector3D(*lo))
+            back.translate(QVector3D(-lo[0], -lo[1], -lo[2]))
+            new.mesh = transformed_mesh(group.mesh, back)
+            for c in new.children or ():
+                c.xform = back * c.xform if c.xform is not None else QMatrix4x4(back)
+            new.xform = to_corner
+            new.axes = None
+    ext = dict(new.ext or {})
+    data = ext.get(KEY)
+    if data is None:
+        data = ext[KEY] = new_dynamic_data(name or group.name or "Component", units)
+    elif name:
+        data.setdefault("instance_attributes", {})["_name"] = name
+    new.ext = ext
+    return new

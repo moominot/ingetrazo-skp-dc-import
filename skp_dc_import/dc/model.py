@@ -71,14 +71,13 @@ class Part:
         return "DEFAULT"
 
     def length_unit(self) -> str:
-        """The unit this part's formulas are written in (its own
-        ``_lengthunits``, else the nearest ancestor's, else inches)."""
-        p = self
-        while p is not None:
-            u = p.attrs.get("_lengthunits")
-            if u and str(u).upper() in INCH:
-                return str(u).upper()
-            p = p.parent
+        """The unit this part's formulas are written in: its OWN
+        ``_lengthunits``, else inches. Not inherited: in SketchUp a part
+        without it reads «1.8» as inches inside a CENTIMETERS component (its
+        attribute window writes the units on every part it edits)."""
+        u = self.attrs.get("_lengthunits")
+        if u and str(u).upper() in INCH:
+            return str(u).upper()
         return "INCHES"
 
     # -- the tree ------------------------------------------------------------
