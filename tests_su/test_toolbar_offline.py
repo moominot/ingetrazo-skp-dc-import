@@ -22,10 +22,10 @@ class App:
     def restore_toolbar_layout(self): self.restored += 1
 
 app = App()
-acts = {k: QAction(k, app.window) for k in ("import", "export", "settings")}
+acts = {k: QAction(k, app.window) for k in ("import", "export", "settings", "help")}
 bar = ui_toolbar.build(app, acts)
 ok(bar is not None and bar.objectName() == ui_toolbar.OBJECT_NAME, "toolbar built with a stable objectName")
-ok([a for a in bar.actions() if not a.isSeparator()] == list(acts.values()), "three buttons, in order")
+ok([a for a in bar.actions() if not a.isSeparator()] == list(acts.values()), "four buttons, in order")
 ok(sum(a.isSeparator() for a in bar.actions()) == 1, "one separator")
 ok(all(not a.icon().isNull() and a.toolTip() for a in acts.values()), "every button has an icon and a tooltip")
 ok(app.restored == 1, "restore_toolbar_layout called once")

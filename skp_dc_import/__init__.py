@@ -11,7 +11,7 @@ separate *dc_tools* extension, which reads the same data.
 """
 from __future__ import annotations
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 import logging
 from pathlib import Path
@@ -116,6 +116,14 @@ def setup(app):
     acts["settings"] = app.add_menu_action(
         "SketchUp .skp settings…", settings,
         tip="Credits, and the blank .skp the exporter needs (not bundled).")
+
+    def show_help():
+        from . import ui_help
+        ui_help.show(app.window, "files")
+
+    acts["help"] = app.add_menu_action(
+        "SketchUp files help…", show_help,
+        tip="How importing and exporting .skp files works, and the blank file export needs.")
 
     try:
         from . import ui_toolbar

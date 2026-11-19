@@ -6,7 +6,7 @@ import logging
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QHBoxLayout,
-                               QLabel, QMessageBox, QPushButton, QVBoxLayout)
+                               QLabel, QMessageBox, QPushButton, QToolButton, QVBoxLayout)
 
 from . import template
 
@@ -60,11 +60,20 @@ class SettingsDialog(QDialog):
         row.addWidget(self.btn_dl)
         row.addWidget(btn_file)
         row.addStretch(1)
+        help_btn = QToolButton()
+        help_btn.setText("?")
+        help_btn.setToolTip("How importing and exporting .skp files works")
+        help_btn.clicked.connect(self._help)
+        row.addWidget(help_btn)
         lay.addLayout(row)
         close = QPushButton("Close")
         close.clicked.connect(self.accept)
         lay.addWidget(close, 0, Qt.AlignRight)
         self.refresh()
+
+    def _help(self):
+        from . import ui_help
+        ui_help.show(self, "template")
 
     def refresh(self):
         state, msg = template.status()

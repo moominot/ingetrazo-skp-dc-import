@@ -24,6 +24,8 @@ components and export it back.
   materials and textures, and each part's Dynamic Components data: the components work as
   dynamic components in SketchUp, with their options.
 - **SketchUp .skp settings…**: credits and the blank `.skp` the export needs.
+- **?** (in the settings window and on the toolbar) opens a help window: import, export, the
+  blank file, and what to do when something goes wrong.
 
 ## Dynamic components (`dc_tools`)
 
@@ -37,7 +39,7 @@ components and export it back.
   opens a help window: how the panel works, what each predefined attribute does, how to write
   formulas and every function with its syntax and an example.
 
-Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.3.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.6.0, dc_tools 0.3.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
