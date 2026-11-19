@@ -28,6 +28,10 @@ dynamic components.</li>
 parts <b>share</b> their geometry (one definition, many placements).</li>
 <li>Each part that is a dynamic component keeps SketchUp's own Dynamic Components attributes, formulas and
 options.</li>
+<li>A <b>dynamic component saved as its own file</b> (a library component: <i>Save As</i> of the component in
+SketchUp) comes in as <b>one component</b> holding its parts, as SketchUp inserts it, with the top-level attributes,
+formulas and options the parts refer to (<i>Name!Attr</i>). Files from every SketchUp version, 2020 and older
+included.</li>
 <li>Faces, materials, textures, soft edges and loose edges come in as with IngeTrazo's own .skp import.</li>
 <li>The whole import is <b>one undo step</b>.</li>
 </ul>
