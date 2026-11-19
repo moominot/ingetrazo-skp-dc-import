@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 app = QApplication.instance() or QApplication([])
 from core.scene import Scene
 from skp_dc_import import builder, reader
-from skp_dc_import.dc import apply as A
+from dc_tools.dc import apply as A
 import dc_harness as H
 IN = 1 / 2.54
 def world(g, parent=None, depth=0, out=None, hidden=False):
@@ -32,7 +32,7 @@ for dname, (opt, v1, v0) in round_trips.items():
     ok1, tot1, _, _ = H.compare_tol(world(twice), world(once), only_visible=False, tol=1e-3)
     changed, _ = A.redraw_group(once, {opt: v1})
     if v0 is None:   # a size: go back to the size it had
-        from skp_dc_import.dc.redraw import live_value
+        from dc_tools.dc.redraw import live_value
         v0 = live_value(A.part_tree(once), opt)
     back, _ = A.redraw_group(changed, {opt: v0})
     ok2, tot2, ex, mi = H.compare_tol(world(back), world(once), only_visible=True, tol=0.03)

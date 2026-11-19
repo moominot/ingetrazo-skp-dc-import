@@ -1,7 +1,7 @@
 import json, sys, math, collections
 sys.path.insert(0, sys.argv[1])
-from skp_dc_import.dc import model as M
-from skp_dc_import.dc.evaluate import Evaluator, _num
+from dc_tools.dc import model as M
+from dc_tools.dc.evaluate import Evaluator, _num
 nodes = json.load(open(sys.argv[2], encoding="utf-8"))
 vis = json.load(open(sys.argv[3], encoding="utf-8"))
 for n, v in zip(nodes, vis): n["vmin"], n["vmax"] = v["vmin"], v["vmax"]

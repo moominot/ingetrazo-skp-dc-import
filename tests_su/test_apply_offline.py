@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QApplication
 app = QApplication.instance() or QApplication([])
 from core.scene import Scene
 from skp_dc_import import builder, reader
-from skp_dc_import.dc import apply as A
+from dc_tools.dc import apply as A
 import dc_harness as H
 
 IN = 1 / 2.54

@@ -1,7 +1,7 @@
 import sys, json
 sys.path[:0] = [sys.argv[1], '.']
-from skp_dc_import.dc import model as M
-from skp_dc_import.dc.redraw import redraw
+from dc_tools.dc import model as M
+from dc_tools.dc.redraw import redraw
 import dc_harness as H
 IN = 1 / 2.54
 cases = {

@@ -11,7 +11,7 @@ app = QApplication.instance() or QApplication([])
 from PySide6.QtGui import QVector3D, QMatrix4x4
 from core.group import Group
 from core.mesh import Mesh
-from skp_dc_import.dc import apply as A, author as AU
+from dc_tools.dc import apply as A, author as AU
 
 CM = 0.01
 

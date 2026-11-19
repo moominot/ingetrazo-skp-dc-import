@@ -1,34 +1,57 @@
-# SketchUp Dynamic Components for IngeTrazo
+# SketchUp files and Dynamic Components for IngeTrazo
 
-An [IngeTrazo](https://github.com/ingelibre/ingetrazo) extension to bring SketchUp **dynamic
-components** in, use them, and make new ones, with the same rules SketchUp follows.
+Three [IngeTrazo](https://github.com/ingelibre/ingetrazo) extensions that share one data format
+(SketchUp's own Dynamic Components attributes, kept in `group.ext["skp_dc_import"]`) and
+install independently:
+
+| Extension | Folder | What it does |
+|---|---|---|
+| **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
+| **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
+
+| **Components manager** | `asset_manager/` | A tray tab with the components in the drawing (preview, count, ⚙ on dynamic ones, *Select*) and a catalog of your own models (a folder of `.igz` with optional `.png` previews, *Insert*). |
+
+None imports another. Installed together, you can import a `.skp`, edit its dynamic
+components and export it back.
+
+## SketchUp files (`skp_dc_import`)
 
 - **Import SketchUp keeping components…** opens a `.skp` with its component tree intact, every
   part a nested IngeTrazo component, and each part's Dynamic Components attributes, formulas and
   options kept, in SketchUp's own format.
-- **Component Options**: the options a component shows its users (text fields, lists,
-  read-only values, in their units). **Apply** redraws it: copies, hidden parts, sizes,
-  positions, rotations and materials, as SketchUp would. Changing LenX/LenY/LenZ resizes it the
-  way SketchUp's dialog does.
-- **Component Attributes**: **Make dynamic**, then per part: attributes with a value or a
-  `=formula`, the predefined ones (X, Y, Z, LenX…, RotX…, Hidden, Material, Copies…) or your
-  own, and how each one shows to users (label, access, units, list choices).
 - **Export SketchUp (.skp) with dynamic components…** writes the document as a `.skp`
   (SketchUp 2017 format, which every later SketchUp opens) with its groups, components,
   materials and textures, and each part's Dynamic Components data: the components work as
   dynamic components in SketchUp, with their options.
+- **SketchUp .skp settings…**: credits and the blank `.skp` the export needs.
+- **?** (in the settings window and on the toolbar) opens a help window: import, export, the
+  blank file, and what to do when something goes wrong.
 
-Every change is one undo step. Version 0.3.0, for IngeTrazo 0.6 (Extension API 2).
+## Dynamic components (`dc_tools`)
+
+- **Component Options**: the options a component shows its users (text fields, lists,
+  read-only values, in their units). Its **?** button opens the help at the Options section. **Apply** redraws it: copies, hidden parts, sizes,
+  positions, rotations and materials, as SketchUp would. Changing LenX/LenY/LenZ resizes it the
+  way SketchUp's dialog does.
+- **Component Attributes**: **Make dynamic**, then per part: attributes with a value or a
+  `=formula`, the predefined ones (X, Y, Z, LenX…, RotX…, Hidden, Material, Copies…) or your
+  own, and how each one shows to users (label, access, units, list choices). The **?** button
+  opens a help window: how the panel works, what each predefined attribute does, how to write
+  formulas and every function with its syntax and an example.
+
+Every change is one undo step. Versions: skp_dc_import 0.6.0, dc_tools 0.3.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
-Download `skp_dc_import-<version>.zip` from the
-[releases](https://github.com/moominot/ingetrazo-skp-dc-import/releases) and unpack it in
+Download `skp_dc_import-<version>.zip` and/or `dc_tools-<version>.zip` from the
+[releases](https://github.com/moominot/ingetrazo-skp-dc-import/releases) and unpack each in
 IngeTrazo's plugins folder (**Extensions ▸ Open plugins folder**; `%APPDATA%\IngeTrazo\plugins\`
-on Windows), so that `…/plugins/skp_dc_import/__init__.py` exists. Restart IngeTrazo.
+on Windows), so that `…/plugins/skp_dc_import/__init__.py` and/or `…/plugins/dc_tools/__init__.py`
+exist. Restart IngeTrazo.
 
-The commands are in the **Extensions** menu and in the right-click menu of a selected
-component. The two panels open from there (and from **Window ▸ Panels**).
+Each extension has its own toolbar and its commands in the **Extensions** menu; Options and
+Attributes are also in the right-click menu of a selected component, and open as side-tray
+panels (also from **Window ▸ Panels**).
 
 ## How close to SketchUp
 
@@ -69,12 +92,15 @@ changed, identical to the originals part by part; a cabinet made in IngeTrazo wo
 SketchUp's Component Options (shelves 3 → 5 → 2 → 4).
 
 **About the template.** OpenSKP's writer builds every `.skp` from a blank document,
-`_vendor/openskp/_scaffold/blank_v17.skp`, whose bytes came from Trimble's SketchUp SDK
-(OpenSKP explains it in `create.py`: SketchUp's empty-document boilerplate, no one's creative
-work). IngeTrazo stopped distributing it to ship only free pieces, and turned its `.skp`
-export off for that reason. This extension carries it to be able to export; remove the
-`_scaffold` folder if you want the extension without it (export then fails, import keeps
-working).
+`blank_v17.skp`, whose bytes came from Trimble's SketchUp SDK (OpenSKP explains it in
+`create.py`: SketchUp's empty-document boilerplate, no one's creative work). IngeTrazo
+stopped distributing it to ship only free pieces, so **this extension does not include it
+either** (since 0.4.0). Importing works without it; to export, open **Extensions ▸ SketchUp
+.skp settings…** and either press **Download from OpenSKP** (fixed commit, checked against its
+SHA-256) or **Choose file…** with a copy you already have. Only that exact file works: the
+writer's offsets are specific to its bytes, so a blank `.skp` saved from SketchUp (including
+SketchUp for Web) is rejected. The file is kept in the extension's folder in the user's data
+directory.
 
 ## Limits
 

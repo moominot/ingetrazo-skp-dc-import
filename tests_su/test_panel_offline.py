@@ -10,8 +10,8 @@ from PySide6.QtWidgets import QApplication, QComboBox, QLineEdit
 app = QApplication.instance() or QApplication([])
 from core.scene import Scene
 from skp_dc_import import builder, reader
-from skp_dc_import import ui
-from skp_dc_import.dc import apply as A
+from dc_tools import ui
+from dc_tools.dc import apply as A
 import dc_harness as H
 
 class History:

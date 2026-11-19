@@ -13,8 +13,8 @@ from core.scene import Scene
 from core.history import History
 from core.group import Group
 from core.mesh import Mesh
-from skp_dc_import import ui, ui_author
-from skp_dc_import.dc import apply as A, author as AU
+from dc_tools import ui, ui_author
+from dc_tools.dc import apply as A, author as AU
 from test_author_offline import part  # noqa: E402  (reuses the board builder; runs its own check too)
 
 scene = Scene()

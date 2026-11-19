@@ -185,6 +185,11 @@ class AttributesPanel(QWidget):
         self.units.setToolTip("The units its formulas are written in")
         mk.addWidget(self.make_btn)
         mk.addWidget(self.units)
+        self.help_btn = QToolButton()
+        self.help_btn.setText("?")
+        self.help_btn.setToolTip("How this panel works, and what each function does")
+        self.help_btn.clicked.connect(self.show_help)
+        mk.addWidget(self.help_btn)
         outer.addLayout(mk)
         split = QSplitter(Qt.Vertical)
         self.tree = QTreeWidget()
@@ -226,6 +231,11 @@ class AttributesPanel(QWidget):
         self.timer.timeout.connect(self._poll)
         self.timer.start()
         self._refresh_enabled()
+
+    def show_help(self):
+        """The «?» button: the shared help window, at this panel's section."""
+        from . import ui_help
+        ui_help.show(self.window(), "attributes")
 
     # -- selection -------------------------------------------------------------
     def _poll(self):
