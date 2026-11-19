@@ -1,6 +1,6 @@
 # SketchUp files and Dynamic Components for IngeTrazo
 
-Two [IngeTrazo](https://github.com/ingelibre/ingetrazo) extensions that share one data format
+Three [IngeTrazo](https://github.com/ingelibre/ingetrazo) extensions that share one data format
 (SketchUp's own Dynamic Components attributes, kept in `group.ext["skp_dc_import"]`) and
 install independently:
 
@@ -9,7 +9,9 @@ install independently:
 | **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
 | **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
 
-Neither imports the other. Installed together, you can import a `.skp`, edit its dynamic
+| **Components manager** | `asset_manager/` | A tray tab with the components in the drawing (preview, count, ⚙ on dynamic ones, *Select*) and a catalog of your own models (a folder of `.igz` with optional `.png` previews, *Insert*). |
+
+None imports another. Installed together, you can import a `.skp`, edit its dynamic
 components and export it back.
 
 ## SketchUp files (`skp_dc_import`)
@@ -33,7 +35,7 @@ components and export it back.
   `=formula`, the predefined ones (X, Y, Z, LenX…, RotX…, Hidden, Material, Copies…) or your
   own, and how each one shows to users (label, access, units, list choices).
 
-Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.1.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
