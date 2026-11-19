@@ -69,6 +69,31 @@ def _units_of(attrs: dict, name: str, part_unit: str) -> str:
     return u
 
 
+def _copies_of(root, part):
+    """The copies (Copy > 0) of ``part`` among its siblings."""
+    name = AU.merged(part).get("_name") or part.name
+
+    def parent_of(g):
+        for c in g.children or ():
+            if c is part:
+                return g
+            hit = parent_of(c)
+            if hit is not None:
+                return hit
+        return None
+
+    parent = parent_of(root)
+    out = []
+    for c in (parent.children if parent is not None else ()) or ():
+        if c is part:
+            continue
+        a = AU.merged(c)
+        copy = _num(a.get("copy"))
+        if isinstance(copy, float) and copy > 0 and (a.get("_name") or c.name) == name:
+            out.append(c)
+    return out
+
+
 class OptionsDialog(QDialog):
     """SketchUp's «Display rule» for one attribute: label, who sees it,
     units, and the choices of a list."""
@@ -360,9 +385,12 @@ class AttributesPanel(QWidget):
             changes.setdefault("_name", g.name or "part")
         if not attrs.get("_lengthunits"):
             changes.setdefault("_lengthunits", self._part_unit(attrs))
+        # The part's copies (Copies) get the same change: in SketchUp they are
+        # the original again, so a formula added later reaches them too.
+        targets = [g] + _copies_of(self.root, g)
         try:
             new, problems = redraw_in_document(self.app.viewport, self.root, {},
-                                               {id(g): changes})
+                                               {id(t): dict(changes) for t in targets})
         except Exception as exc:  # noqa: BLE001
             _log.exception("attribute edit failed")
             self.status.setText(f"Could not apply: {exc}")

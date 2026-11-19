@@ -268,28 +268,33 @@ def make_dynamic_tree(group, name: str | None = None, units: str = "CENTIMETERS"
     from core.group import transformed_mesh
     from .author import new_dynamic_data
     new = _clone(group)
-    if group.xform is None:
-        lo = [float("inf")] * 3
+    lo = [float("inf")] * 3
 
-        def walk(g, m):
-            for v in g.mesh.vertices:
-                p = getattr(v, "position", v)
-                p = m.map(p) if m is not None else p
-                for i, c in enumerate((p.x(), p.y(), p.z())):
-                    lo[i] = min(lo[i], c)
-            for c in g.children or ():
+    def walk(g, m):
+        for v in g.mesh.vertices:
+            p = getattr(v, "position", v)
+            p = m.map(p) if m is not None else p
+            for i, c in enumerate((p.x(), p.y(), p.z())):
+                lo[i] = min(lo[i], c)
+        for c in g.children or ():
+            if c.xform is None:
+                walk(c, m)
+            else:
                 walk(c, c.xform if m is None else m * c.xform)
 
-        walk(group, None)
-        if lo[0] != float("inf"):
-            to_corner, back = QMatrix4x4(), QMatrix4x4()
-            to_corner.translate(QVector3D(*lo))
-            back.translate(QVector3D(-lo[0], -lo[1], -lo[2]))
+    walk(group, None)                      # in the group's OWN frame
+    if lo[0] != float("inf") and max(abs(v) for v in lo) > 1e-9:
+        # Axes to the lower corner of what it holds (where a SketchUp
+        # component has them), the group staying where it is in the model.
+        to_corner, back = QMatrix4x4(), QMatrix4x4()
+        to_corner.translate(QVector3D(*lo))
+        back.translate(QVector3D(-lo[0], -lo[1], -lo[2]))
+        if group.mesh.vertices:
             new.mesh = transformed_mesh(group.mesh, back)
-            for c in new.children or ():
-                c.xform = back * c.xform if c.xform is not None else QMatrix4x4(back)
-            new.xform = to_corner
-            new.axes = None
+        for c in new.children or ():
+            c.xform = back * c.xform if c.xform is not None else QMatrix4x4(back)
+        new.xform = (QMatrix4x4(group.xform) * to_corner) if group.xform is not None else to_corner
+        new.axes = None
     ext = dict(new.ext or {})
     data = ext.get(KEY)
     if data is None:

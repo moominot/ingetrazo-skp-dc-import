@@ -21,7 +21,12 @@ scene = Scene()
 root = Group(Mesh(), name="armari")
 root.adopt([part("lateral", 0, 0, 0, 1.8, 40, 100), part("lateral2", 78.2, 0, 0, 1.8, 40, 100),
             part("prestatge", 1.8, 0, 50, 76.4, 40, 1.8)])
-root.xform = None
+# As IngeTrazo leaves a group of groups (adopt: an identity matrix), and
+# drawn away from the origin, so the axes must move to its corner.
+from PySide6.QtGui import QMatrix4x4, QVector3D
+off = QMatrix4x4(); off.translate(QVector3D(-2.0, 0.5, 0.0))
+for c in root.children:
+    c.xform = off * c.xform
 scene.groups.append(root)
 scene.selection.add(root)
 
@@ -79,6 +84,13 @@ print("5 options a user sees:", [(o.label, w.text() if hasattr(w, "text") else "
 op.rows[0][1].setText("5"); op.apply()
 g = scene.groups[0]
 print("6 after typing 5 shelves:", sum(1 for c in g.children if AU.merged(c).get("_name") == "prestatge"), "shelves |", op.status.text())
+def wpos(c):
+    d = (g.xform * c.xform).data()
+    return (round(d[12] * 100, 2), round(d[13] * 100, 2), round(d[14] * 100, 2))
+got = sorted((AU.merged(c).get("_name") or c.name, wpos(c)) for c in g.children)
+want = sorted([("lateral", (-200.0, 50.0, 0.0)), ("lateral2", (-121.8, 50.0, 0.0))] +
+              [("prestatge", (-198.2, 50.0, z)) for z in (20.0, 40.0, 60.0, 80.0, 100.0)])
+print("6b world positions (cm):", "OK" if got == want else f"BAD {got}")
 steps = 0
 while vp.history.undo() if hasattr(vp.history, "undo") else False:
     steps += 1
