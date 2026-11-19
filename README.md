@@ -27,7 +27,7 @@ Download `skp_dc_import-<version>.zip` from the
 IngeTrazo's plugins folder (**Extensions ▸ Open plugins folder**; `%APPDATA%\IngeTrazo\plugins\`
 on Windows), so that `…/plugins/skp_dc_import/__init__.py` exists. Restart IngeTrazo.
 
-The commands are in the **Extensions** menu and in the right-click menu of a selected
+The commands are on the extension's toolbar (Import, Export, Options, Attributes, Settings), in the **Extensions** menu and in the right-click menu of a selected
 component. The two panels open from there (and from **Window ▸ Panels**).
 
 ## How close to SketchUp

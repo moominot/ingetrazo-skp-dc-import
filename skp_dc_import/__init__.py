@@ -74,7 +74,8 @@ def setup(app):
         QApplication.restoreOverrideCursor()
         QMessageBox.information(app.window, _TITLE, _summary(report))
 
-    app.add_menu_action(
+    acts = {}
+    acts["import"] = app.add_menu_action(
         "Import SketchUp keeping components…", ask,
         tip="Import a .skp keeping its components nested, with their "
             "SketchUp Dynamic Components attributes.")
@@ -103,7 +104,7 @@ def setup(app):
         QApplication.restoreOverrideCursor()
         app.viewport.flash_status(f"Exported {Path(path).name} (SketchUp 2017 format).", 5000)
 
-    app.add_menu_action(
+    acts["export"] = app.add_menu_action(
         "Export SketchUp (.skp) with dynamic components…", export_skp,
         tip="Write the document as a .skp (SketchUp 2017 format) with groups, "
             "components and their Dynamic Components attributes.")
@@ -112,7 +113,7 @@ def setup(app):
         from .ui_settings import SettingsDialog
         SettingsDialog(app.window).exec()
 
-    app.add_menu_action(
+    acts["settings"] = app.add_menu_action(
         "SketchUp .skp settings…", settings,
         tip="Credits, and the blank .skp the exporter needs (not bundled).")
 
@@ -125,7 +126,7 @@ def setup(app):
         app.show_panel(dock)
         panel.show_group(selected_root(app.viewport.scene), force=True)
 
-    app.add_menu_action(
+    acts["options"] = app.add_menu_action(
         "Dynamic component options…", show_options,
         tip="Options of the selected SketchUp dynamic component.")
 
@@ -141,7 +142,7 @@ def setup(app):
         app.show_panel(attr_dock)
         attr_panel.show_root(selected_top(app.viewport.scene), ())
 
-    app.add_menu_action(
+    acts["attributes"] = app.add_menu_action(
         "Component attributes…", show_attributes,
         tip="Make the selected component dynamic and edit its attributes and formulas.")
 
@@ -177,3 +178,9 @@ def setup(app):
 
     if hasattr(app, "add_outliner_kind"):
         app.add_outliner_kind(kind)
+
+    try:
+        from . import ui_toolbar
+        ui_toolbar.build(app, acts)
+    except Exception:  # noqa: BLE001 - a toolbar must never stop the extension loading
+        _log.exception("could not build the toolbar")

@@ -36,14 +36,21 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("SketchUp .skp settings")
         self.setMinimumWidth(480)
         lay = QVBoxLayout(self)
+        self.state = QLabel()
+        self.state.setWordWrap(True)
+        self.state.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        lay.addWidget(self.state)
         for html in (WHY, CREDITS):
             lbl = QLabel(html)
             lbl.setWordWrap(True)
             lbl.setTextFormat(Qt.RichText)
             lay.addWidget(lbl)
-        self.state = QLabel()
-        self.state.setWordWrap(True)
-        lay.addWidget(self.state)
+        link = QLabel(f'<a href="{template.UPSTREAM_REPO}">OpenSKP project</a> · '
+                      f'file at commit <code>{template.UPSTREAM_COMMIT[:10]}</code> · '
+                      f'SHA-256 <code>{template.SHA256[:16]}…</code>')
+        link.setTextFormat(Qt.RichText)
+        link.setOpenExternalLinks(True)
+        lay.addWidget(link)
         row = QHBoxLayout()
         self.btn_dl = QPushButton("Download from OpenSKP")
         self.btn_dl.setToolTip(template.URL)
@@ -61,8 +68,10 @@ class SettingsDialog(QDialog):
 
     def refresh(self):
         state, msg = template.status()
-        mark = {"ok": "✔", "missing": "✖", "bad": "⚠"}[state]
-        self.state.setText(f"<b>{mark} Export template:</b> {msg}")
+        mark, color = {"ok": ("✔", "#2e7d32"), "missing": ("✖", "#c62828"),
+                       "bad": ("⚠", "#e65100")}[state]
+        self.state.setText(f'<span style="color:{color}"><b>{mark} Export template:'
+                           f'</b></span> {msg}')
 
     def _download(self):
         QApplication.setOverrideCursor(Qt.WaitCursor)
