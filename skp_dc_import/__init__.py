@@ -94,7 +94,10 @@ def setup(app):
     # Component Attributes: make dynamic, edit parts' attributes/formulas.
     from .ui_author import AttributesPanel, selected_top
     attr_panel = AttributesPanel(app)
-    attr_dock = app.add_panel("Component Attributes", attr_panel, start_hidden=True)
+    # A second panel of this extension needs its own name, or add_panel
+    # hands back the first one (Component Options).
+    attr_dock = app.add_panel("Component Attributes", attr_panel, name="attributes",
+                              start_hidden=True)
 
     def show_attributes():
         app.show_panel(attr_dock)
