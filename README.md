@@ -18,7 +18,8 @@ components** in, use them, and make new ones, with the same rules SketchUp follo
   materials and textures, and each part's Dynamic Components data: the components work as
   dynamic components in SketchUp, with their options.
 
-Every change is one undo step. Version 0.3.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step, also on a component inside an open group or component
+(nested dynamic components see their parent, as in SketchUp). Version 0.3.1, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
