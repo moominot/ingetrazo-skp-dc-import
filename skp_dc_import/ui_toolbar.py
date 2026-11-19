@@ -39,11 +39,11 @@ def build(app, actions: dict) -> QToolBar | None:
     window = getattr(app, "window", None)
     if window is None or not hasattr(window, "addToolBar"):
         return None
-    spec = (("import", "In", _FILE, "Import SketchUp keeping components"),
-            ("export", "Out", _FILE, "Export SketchUp (.skp) with dynamic components"),
-            ("settings", "…", _CFG, "SketchUp .skp settings"),
+    spec = (("import", "In", _FILE, "Import .skp keeping components"),
+            ("export", "Out", _FILE, "Export .skp with dynamic components"),
+            ("settings", "…", _CFG, ".skp settings"),
             ("help", "?", _CFG, "How importing and exporting .skp files works"))
-    bar = QToolBar("SketchUp files", window)
+    bar = QToolBar(".skp files", window)
     bar.setObjectName(OBJECT_NAME)
     sep_after = {"export"}
     for key, glyph, color, tip in spec:

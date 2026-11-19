@@ -121,7 +121,7 @@ class OptionsPanel(QWidget):
         self.rows = []                      # (Option, widget, initial)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(6, 6, 6, 6)
-        self.title = QLabel("Select a dynamic component imported from SketchUp.")
+        self.title = QLabel("Select a dynamic component.")
         self.title.setWordWrap(True)
         outer.addWidget(self.title)
         self.scroll = QScrollArea()
@@ -196,7 +196,7 @@ class OptionsPanel(QWidget):
         self._clear()
         self.status.setText("")
         if group is None:
-            self.title.setText("Select a dynamic component imported from SketchUp.")
+            self.title.setText("Select a dynamic component.")
             self._set_enabled(False)
             return
         root, _frame = A.part_in_context(self.app.viewport.scene, group)
@@ -287,6 +287,6 @@ class OptionsPanel(QWidget):
         self.show_group(new, force=True)
         if problems:
             self.status.setText(f"Redrawn. {len(problems)} formula(s) could not be "
-                                "evaluated and kept their value, as in SketchUp.")
+                                "evaluated and kept their value.")
         else:
             self.status.setText("Redrawn." if options else "Redrawn (no option changed).")

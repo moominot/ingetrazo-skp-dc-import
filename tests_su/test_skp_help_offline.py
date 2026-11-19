@@ -17,7 +17,7 @@ def ok(c, w):
 page = help_text.html()
 ok(all(f'name="{a}"' in page for a in ("files", "import", "export", "template", "problems")), "all sections have an anchor")
 ok(template.FILE_NAME in page, "the help names the template file the code uses")
-ok(all(t in page for t in ("Download from OpenSKP", "Choose file…", "SketchUp 2017", "one undo step")),
+ok(all(t in page for t in ("Download from OpenSKP", "Choose file…", ".skp 2017", "one undo step")),
    "names the controls and formats")
 # the messages the help quotes are the ones the code produces
 ok("Could not import" in open(os.path.join(EXT, "skp_dc_import", "__init__.py")).read(), "«Could not import» is a real message")
@@ -30,7 +30,7 @@ btns = [b for b in d.findChildren(QToolButton) if b.text() == "?"]
 ok(len(btns) == 1 and btns[0].toolTip(), "the settings window has a ? button")
 btns[0].click(); qa.processEvents()
 h = ui_help._dialog
-ok(h is not None and h.isVisible() and "Import SketchUp keeping components" in h.view.toPlainText(), "it opens the help")
+ok(h is not None and h.isVisible() and "Import .skp keeping components" in h.view.toPlainText(), "it opens the help")
 ok(h.view.verticalScrollBar().value() > 0, "scrolled to the blank-file section")
 h.find.setText("firewall"); qa.processEvents()
 ok(h.view.textCursor().selectedText().lower() == "firewall", "search finds a word")

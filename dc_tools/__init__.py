@@ -11,7 +11,7 @@ a separate extension. This one needs neither OpenSKP nor any .skp file.
 """
 from __future__ import annotations
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 import logging
 
@@ -36,7 +36,7 @@ def setup(app):
 
     acts["options"] = app.add_menu_action(
         "Dynamic component options…", show_options,
-        tip="Options of the selected SketchUp dynamic component.")
+        tip="Options of the selected dynamic component.")
 
     # Component Attributes: make dynamic, edit parts' attributes/formulas.
     from .ui_author import AttributesPanel, selected_top
@@ -82,7 +82,7 @@ def setup(app):
         for name in options[:4]:
             label = da.get(f"_{name}_formlabel") or da.get(f"_{name}_label") or name
             props.append((str(label), str(da.get(name, ""))))
-        return {"type": "SketchUp dynamic component", "props": props}
+        return {"type": "Dynamic component", "props": props}
 
     if hasattr(app, "add_outliner_kind"):
         app.add_outliner_kind(kind)

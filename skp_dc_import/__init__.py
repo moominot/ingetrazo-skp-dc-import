@@ -11,7 +11,7 @@ separate *dc_tools* extension, which reads the same data.
 """
 from __future__ import annotations
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 import logging
 from pathlib import Path
@@ -19,7 +19,7 @@ from pathlib import Path
 from .builder import KEY  # noqa: F401 - the data key shared with dc_tools
 
 _log = logging.getLogger(__name__)
-_TITLE = "Import SketchUp keeping components"
+_TITLE = "Import .skp keeping components"
 
 
 def import_file(viewport, path) -> dict:
@@ -59,7 +59,7 @@ def setup(app):
         from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
         from PySide6.QtCore import Qt
         path, _ = QFileDialog.getOpenFileName(
-            app.window, _TITLE, "", "SketchUp (*.skp)")
+            app.window, _TITLE, "", ".skp files (*.skp)")
         if not path:
             return
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -76,18 +76,18 @@ def setup(app):
 
     acts = {}
     acts["import"] = app.add_menu_action(
-        "Import SketchUp keeping components…", ask,
+        "Import .skp keeping components…", ask,
         tip="Import a .skp keeping its components nested, with their "
-            "SketchUp Dynamic Components attributes.")
+            "dynamic attributes and formulas.")
 
     def export_skp():
         from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
         from PySide6.QtCore import Qt
-        title = "Export SketchUp (.skp) with dynamic components"
+        title = "Export .skp with dynamic components"
         from .ui_settings import ensure_template
         if not ensure_template(app.window):
             return
-        path, _ = QFileDialog.getSaveFileName(app.window, title, "", "SketchUp (*.skp)")
+        path, _ = QFileDialog.getSaveFileName(app.window, title, "", ".skp files (*.skp)")
         if not path:
             return
         if not path.lower().endswith(".skp"):
@@ -102,19 +102,19 @@ def setup(app):
             QMessageBox.warning(app.window, title, f"Could not export:\n{exc}")
             return
         QApplication.restoreOverrideCursor()
-        app.viewport.flash_status(f"Exported {Path(path).name} (SketchUp 2017 format).", 5000)
+        app.viewport.flash_status(f"Exported {Path(path).name} (.skp 2017 format).", 5000)
 
     acts["export"] = app.add_menu_action(
-        "Export SketchUp (.skp) with dynamic components…", export_skp,
-        tip="Write the document as a .skp (SketchUp 2017 format) with groups, "
-            "components and their Dynamic Components attributes.")
+        "Export .skp with dynamic components…", export_skp,
+        tip="Write the document as a .skp (2017 format) with groups, "
+            "components and their dynamic attributes.")
 
     def settings():
         from .ui_settings import SettingsDialog
         SettingsDialog(app.window).exec()
 
     acts["settings"] = app.add_menu_action(
-        "SketchUp .skp settings…", settings,
+        ".skp settings…", settings,
         tip="Credits, and the blank .skp the exporter needs (not bundled).")
 
     def show_help():
@@ -122,7 +122,7 @@ def setup(app):
         ui_help.show(app.window, "files")
 
     acts["help"] = app.add_menu_action(
-        "SketchUp files help…", show_help,
+        ".skp files help…", show_help,
         tip="How importing and exporting .skp files works, and the blank file export needs.")
 
     try:
