@@ -19,67 +19,98 @@ from .dc.redraw import LEN, _LiveEvaluator, live_value
 _log = logging.getLogger(__name__)
 
 
+def context_members(scene):
+    """The groups the user can pick where they are editing: the top-level
+    ones, or the parts of the open group (SketchUp's active context). A
+    component inside a group is only selectable with that group open."""
+    ctx = getattr(scene, "edit_group", None)
+    if ctx is None:
+        return getattr(scene, "groups", None) or []
+    return getattr(ctx, "children", None) or []
+
+
 def selected_root(scene):
-    """The one selected top-level dynamic component, else None."""
+    """The one selected dynamic component of the current context, else None."""
+    members = context_members(scene)
     found = None
     for e in getattr(scene, "selection", ()) or ():
         g = getattr(e, "owner", None) or e
-        if g in getattr(scene, "groups", ()) and A.is_dynamic_root(g):
+        if any(g is m for m in members) and A.is_dynamic_root(g):
             if found is not None and found is not g:
                 return None
             found = g
     return found
 
 
-def replace_in_document(viewport, group, make_new):
-    """Swap ``group`` for ``make_new(scene)`` (a new group) as ONE undo
-    step, keeping its place in the document and in the selection."""
-    from core.history import SnapshotImport
-    box = {}
+def _swap_command(old, make_new):
+    """One undo step that puts ``make_new(scene)`` where ``old`` is — the
+    top-level list or the ``children`` of the group that holds it, at any
+    depth — keeping its place and the selection; undo puts ``old`` back.
+    (SnapshotImport only tracks ``scene.groups``: a part swapped inside an
+    open group was out of its reach, and ``scene.groups.index`` failed.)"""
+    from core.history import Command, group_owner_list
 
-    def mutate(scene):
-        new = make_new(scene)
-        i = scene.groups.index(group)
-        scene.groups[i] = new
-        scene.selection.discard(group)
-        scene.selection.add(new)
-        box["new"] = new
+    class SwapGroupCommand(Command):
+        def __init__(self):
+            self.new = None
+            self.owner = None
 
-    viewport.history.execute(SnapshotImport(mutate))
-    error = getattr(viewport.history, "last_error", None)
-    if error and "new" not in box:
-        raise RuntimeError(error)
+        def _swap(self, scene, out, into):
+            i = next(k for k, g in enumerate(self.owner) if g is out)
+            self.owner[i] = into
+            scene.selection.discard(out)
+            scene.selection.add(into)
+            scene.version += 1
+
+        def do(self, scene):
+            if self.new is None:
+                owner = group_owner_list(scene, old)
+                if owner is None:
+                    raise ValueError("the component is not in the document any more")
+                self.owner = owner
+                self.new = make_new(scene)
+            self._swap(scene, old, self.new)
+
+        def undo(self, scene):
+            self._swap(scene, self.new, old)
+
+    return SwapGroupCommand()
+
+
+def swap_in_document(viewport, group, make_new):
+    """Swap ``group`` for ``make_new(scene)`` as ONE undo step, wherever it
+    is (top level or inside a group, open or not). Returns the command
+    (``.new`` is the new group)."""
+    cmd = _swap_command(group, make_new)
+    viewport.history.execute(cmd)
+    if cmd.new is None or not any(g is cmd.new for g in (cmd.owner or ())):
+        raise RuntimeError(getattr(viewport.history, "last_error", None)
+                           or "the component could not be replaced")
     notify = getattr(viewport, "notify_scene_changed", None)
     if callable(notify):
         notify()
     viewport.update()
-    return box.get("new")
+    return cmd
+
+
+def replace_in_document(viewport, group, make_new):
+    """Swap ``group`` for ``make_new(scene)`` (a new group) as ONE undo
+    step, keeping its place in the document and in the selection."""
+    return swap_in_document(viewport, group, make_new).new
 
 
 def redraw_in_document(viewport, group, options: dict, edits: dict | None = None):
     """Redraw ``group`` with ``options`` (and authoring ``edits``) as ONE
     undo step; the new tree takes its place in the document and in the
     selection. Returns (the new group, formula problems)."""
-    from core.history import SnapshotImport
-    box = {}
+    errors = []
 
-    def mutate(scene):
+    def make_new(scene):
         new, ev = A.redraw_group(group, options, scene, edits)
-        i = scene.groups.index(group)
-        scene.groups[i] = new
-        scene.selection.discard(group)
-        scene.selection.add(new)
-        box["new"], box["errors"] = new, list(ev.errors)
+        errors[:] = list(ev.errors)
+        return new
 
-    viewport.history.execute(SnapshotImport(mutate))
-    error = getattr(viewport.history, "last_error", None)
-    if error and "new" not in box:
-        raise RuntimeError(error)
-    notify = getattr(viewport, "notify_scene_changed", None)
-    if callable(notify):
-        notify()
-    viewport.update()
-    return box.get("new"), box.get("errors", [])
+    return swap_in_document(viewport, group, make_new).new, errors
 
 
 class OptionsPanel(QWidget):
@@ -149,7 +180,7 @@ class OptionsPanel(QWidget):
             self.title.setText("Select a dynamic component imported from SketchUp.")
             self._set_enabled(False)
             return
-        root = A.part_tree(group)
+        root, _frame = A.part_in_context(self.app.viewport.scene, group)
         ev = _LiveEvaluator(root)
         opts = O.options_of(root.attrs)
         self.title.setText(f"<b>{root.name}</b> — {len(opts)} options")
@@ -200,7 +231,7 @@ class OptionsPanel(QWidget):
                     continue
                 if str(raw).startswith("="):
                     # A choice whose value is a formula (SketchUp: «=e3_angle»).
-                    root = root or A.part_tree(self.group)
+                    root = root or A.part_in_context(self.app.viewport.scene, self.group)[0]
                     ev = _LiveEvaluator(root)
                     try:
                         v = F.evaluate(F.parse(str(raw)[1:]), ev._lookup(root))
