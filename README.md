@@ -18,7 +18,7 @@ components** in, use them, and make new ones, with the same rules SketchUp follo
   materials and textures, and each part's Dynamic Components data: the components work as
   dynamic components in SketchUp, with their options.
 
-Every change is one undo step. Version 0.3.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Version 0.4.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
@@ -69,12 +69,15 @@ changed, identical to the originals part by part; a cabinet made in IngeTrazo wo
 SketchUp's Component Options (shelves 3 → 5 → 2 → 4).
 
 **About the template.** OpenSKP's writer builds every `.skp` from a blank document,
-`_vendor/openskp/_scaffold/blank_v17.skp`, whose bytes came from Trimble's SketchUp SDK
-(OpenSKP explains it in `create.py`: SketchUp's empty-document boilerplate, no one's creative
-work). IngeTrazo stopped distributing it to ship only free pieces, and turned its `.skp`
-export off for that reason. This extension carries it to be able to export; remove the
-`_scaffold` folder if you want the extension without it (export then fails, import keeps
-working).
+`blank_v17.skp`, whose bytes came from Trimble's SketchUp SDK (OpenSKP explains it in
+`create.py`: SketchUp's empty-document boilerplate, no one's creative work). IngeTrazo
+stopped distributing it to ship only free pieces, so **this extension does not include it
+either** (since 0.4.0). Importing works without it; to export, open **Extensions ▸ SketchUp
+.skp settings…** and either press **Download from OpenSKP** (fixed commit, checked against its
+SHA-256) or **Choose file…** with a copy you already have. Only that exact file works: the
+writer's offsets are specific to its bytes, so a blank `.skp` saved from SketchUp (including
+SketchUp for Web) is rejected. The file is kept in the extension's folder in the user's data
+directory.
 
 ## Limits
 

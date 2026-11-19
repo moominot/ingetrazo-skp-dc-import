@@ -11,7 +11,7 @@ makes components dynamic and edits their attributes and formulas.
 """
 from __future__ import annotations
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 import logging
 from pathlib import Path
@@ -83,6 +83,9 @@ def setup(app):
         from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
         from PySide6.QtCore import Qt
         title = "Export SketchUp (.skp) with dynamic components"
+        from .ui_settings import ensure_template
+        if not ensure_template(app.window):
+            return
         path, _ = QFileDialog.getSaveFileName(app.window, title, "", "SketchUp (*.skp)")
         if not path:
             return
@@ -104,6 +107,14 @@ def setup(app):
         "Export SketchUp (.skp) with dynamic components…", export_skp,
         tip="Write the document as a .skp (SketchUp 2017 format) with groups, "
             "components and their Dynamic Components attributes.")
+
+    def settings():
+        from .ui_settings import SettingsDialog
+        SettingsDialog(app.window).exec()
+
+    app.add_menu_action(
+        "SketchUp .skp settings…", settings,
+        tip="Credits, and the blank .skp the exporter needs (not bundled).")
 
     # Component Options: a side-tray tab that follows the selection.
     from .ui import OptionsPanel, selected_root

@@ -1287,6 +1287,10 @@ def save_skp(scene, path) -> None:
     except ImportError as exc:
         raise RuntimeError("OpenSKP is required for SKP export") from exc
 
+    from . import template
+    if not template.apply():
+        raise RuntimeError(template.status()[1] + ". Get it in "
+                           "Extensions ▸ SketchUp .skp settings…")
     import tempfile
     with tempfile.TemporaryDirectory(prefix="ingetrazo-skp-") as stage:
         _write_skp(scene, path, openskp, SkpWriteError, Path(stage))

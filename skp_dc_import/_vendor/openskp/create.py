@@ -797,21 +797,30 @@ def _detect_image_subtype(image_bytes: bytes) -> int:
     )
 
 
+_scaffold_path = None  # set by a host that does not bundle the template
+
+
+def set_scaffold_path(path) -> None:
+    """Use the blank-document scaffold at ``path`` when none is bundled in
+    ``_scaffold/``. It must still match ``_SCAFFOLD_SHA256``. (Local change
+    for skp_dc_import, which does not ship the template.)"""
+    global _scaffold_path
+    _scaffold_path = path
+
+
 def _load_scaffold() -> bytes:
-    # _scaffold is a plain data subdirectory, not an importable package (no
-    # __init__.py) - anchor on the openskp package itself and navigate in.
-    #
-    # Anchored via __package__ (this module's own containing package, e.g.
-    # "openskp" for a normal pip install) rather than the hardcoded string
-    # "openskp" - the hardcoded form breaks for anyone who vendors this
-    # package under a different dotted path (a Blender/FreeCAD addon
-    # bundling it as its own extension.vendor.openskp submodule, say),
-    # since resources.files() then looks for a top-level "openskp" that
-    # was never registered under that name. Caught by testing a vendored
-    # consumer end-to-end, not by reading this function in isolation -
-    # __package__ resolves correctly either way, with no behavior change
-    # for a normal top-level install.
-    data = (resources.files(__package__) / "_scaffold" / _SCAFFOLD_FILE).read_bytes()
+    # A bundled copy wins; otherwise the host-provided file (see
+    # set_scaffold_path). _scaffold is a plain data subdirectory anchored on
+    # __package__ so vendored copies under another dotted path still work.
+    try:
+        data = (resources.files(__package__) / "_scaffold" / _SCAFFOLD_FILE).read_bytes()
+    except (FileNotFoundError, OSError):
+        if _scaffold_path is None:
+            raise SkpWriteError(
+                "no blank-document scaffold: it is not bundled and no file "
+                "was given (set_scaffold_path)") from None
+        with open(_scaffold_path, "rb") as fh:
+            data = fh.read()
     digest = hashlib.sha256(data).hexdigest()
     if digest != _SCAFFOLD_SHA256:
         raise SkpWriteError(
