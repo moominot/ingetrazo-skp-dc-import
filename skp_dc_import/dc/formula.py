@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# From d1rty-pixel's «Dynamic Components for IngeTrazo» (GPL-3.0,
+# https://github.com/d1rty-pixel/ingetrazo-dynamic-components),
+# extended here: part names with spaces before «!», and SketchUp's rule that
+# only a positive number is true.
 """SketchUp-style formula language: tokenizer, parser and tree-walking interpreter.
 
 Formulas come from documents we did not write, so this module never uses

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# From d1rty-pixel's «Dynamic Components for IngeTrazo» (GPL-3.0,
+# https://github.com/d1rty-pixel/ingetrazo-dynamic-components), unchanged.
 """Translatable messages for the pure modules (no Qt, no IngeTrazo).
 
 A :class:`Msg` *is* the English text (``str()``, ``==`` and ``in`` see that), and

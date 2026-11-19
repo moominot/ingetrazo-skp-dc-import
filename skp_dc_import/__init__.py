@@ -5,12 +5,13 @@ Extensions ▸ «Import SketchUp keeping components…» brings a .skp in with i
 component tree intact (every part a nested component instance, shared
 geometry for repeated parts) and, on each part that is dynamic, SketchUp's
 own Dynamic Components attributes, formulas and options in
-``group.ext["skp_dc_import"]``. Phase 1: the components arrive as they were
-saved; making them respond to new values comes next.
+``group.ext["skp_dc_import"]``. «Component Options» changes a dynamic
+component's options and redraws it as SketchUp does; «Component Attributes»
+makes components dynamic and edits their attributes and formulas.
 """
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import logging
 from pathlib import Path
