@@ -230,7 +230,34 @@ def build(scene, model, path) -> dict:
         return group
 
     added = []
-    if root is not None:
+    model_da = reader.dynamic_attributes(model)
+    if root is not None and model_da:
+        # A dynamic component saved as its own file: the file IS the
+        # component. SketchUp keeps its top-level attributes, formulas and
+        # options (what the parts call «Name!Attr») on the MODEL, and
+        # importing the file inserts ONE component of it whose definition
+        # takes them. Placing the parts loose instead would leave them
+        # without their parent: every formula that refers to it breaks.
+        name = str(model_da.get("_name") or "").strip() or path.stem
+        wrapper = Group(mesh_for(root, None), name=name)
+        wrapper.xform = QMatrix4x4()
+        wrapper.component = True
+        wrapper.ext = {KEY: {
+            "definition": path.stem,
+            "definition_guid": "",
+            "instance_guid": "",
+            "is_group": False,
+            "definition_attributes": model_da,
+            "instance_attributes": {},
+        }}
+        report["placements"] += 1
+        report["dynamic"] += 1
+        report["dynamic_roots"].append(name)
+        kids = [place(inst, None, 1, False)
+                for inst in getattr(root, "instances", []) or []]
+        wrapper.adopt([k for k in kids if k is not None])
+        added.append(wrapper)
+    elif root is not None:
         loose = mesh_for(root, None)
         if loose.faces or loose.edges:
             added.append(Group(loose, name=path.stem))
