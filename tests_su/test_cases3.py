@@ -1,8 +1,8 @@
 """Root resized the dialog's way: the root's transform is scaled, then redraw."""
 import sys
 sys.path[:0] = [sys.argv[1], '.']
-from skp_dc_import.dc import model as M
-from skp_dc_import.dc.redraw import redraw, live_value
+from dc_tools.dc import model as M
+from dc_tools.dc.redraw import redraw, live_value
 import dc_harness as H
 IN = 1 / 2.54
 cases = [('FINESTRA SIMPLE#34', 'lenx', 150*IN, 'FINESTRASIMPLE_3', {}), ('FINESTRA SIMPLE#34', 'lenz', 120*IN, 'FINESTRASIMPLE_5', {'m_alt_inf': 10*IN}),

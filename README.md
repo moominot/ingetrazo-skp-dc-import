@@ -1,11 +1,30 @@
-# SketchUp Dynamic Components for IngeTrazo
+# SketchUp files and Dynamic Components for IngeTrazo
 
-An [IngeTrazo](https://github.com/ingelibre/ingetrazo) extension to bring SketchUp **dynamic
-components** in, use them, and make new ones, with the same rules SketchUp follows.
+Two [IngeTrazo](https://github.com/ingelibre/ingetrazo) extensions that share one data format
+(SketchUp's own Dynamic Components attributes, kept in `group.ext["skp_dc_import"]`) and
+install independently:
+
+| Extension | Folder | What it does |
+|---|---|---|
+| **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
+| **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
+
+Neither imports the other. Installed together, you can import a `.skp`, edit its dynamic
+components and export it back.
+
+## SketchUp files (`skp_dc_import`)
 
 - **Import SketchUp keeping components…** opens a `.skp` with its component tree intact, every
   part a nested IngeTrazo component, and each part's Dynamic Components attributes, formulas and
   options kept, in SketchUp's own format.
+- **Export SketchUp (.skp) with dynamic components…** writes the document as a `.skp`
+  (SketchUp 2017 format, which every later SketchUp opens) with its groups, components,
+  materials and textures, and each part's Dynamic Components data: the components work as
+  dynamic components in SketchUp, with their options.
+- **SketchUp .skp settings…**: credits and the blank `.skp` the export needs.
+
+## Dynamic components (`dc_tools`)
+
 - **Component Options**: the options a component shows its users (text fields, lists,
   read-only values, in their units). **Apply** redraws it: copies, hidden parts, sizes,
   positions, rotations and materials, as SketchUp would. Changing LenX/LenY/LenZ resizes it the
@@ -13,22 +32,20 @@ components** in, use them, and make new ones, with the same rules SketchUp follo
 - **Component Attributes**: **Make dynamic**, then per part: attributes with a value or a
   `=formula`, the predefined ones (X, Y, Z, LenX…, RotX…, Hidden, Material, Copies…) or your
   own, and how each one shows to users (label, access, units, list choices).
-- **Export SketchUp (.skp) with dynamic components…** writes the document as a `.skp`
-  (SketchUp 2017 format, which every later SketchUp opens) with its groups, components,
-  materials and textures, and each part's Dynamic Components data: the components work as
-  dynamic components in SketchUp, with their options.
 
-Every change is one undo step. Version 0.4.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
-Download `skp_dc_import-<version>.zip` from the
-[releases](https://github.com/moominot/ingetrazo-skp-dc-import/releases) and unpack it in
+Download `skp_dc_import-<version>.zip` and/or `dc_tools-<version>.zip` from the
+[releases](https://github.com/moominot/ingetrazo-skp-dc-import/releases) and unpack each in
 IngeTrazo's plugins folder (**Extensions ▸ Open plugins folder**; `%APPDATA%\IngeTrazo\plugins\`
-on Windows), so that `…/plugins/skp_dc_import/__init__.py` exists. Restart IngeTrazo.
+on Windows), so that `…/plugins/skp_dc_import/__init__.py` and/or `…/plugins/dc_tools/__init__.py`
+exist. Restart IngeTrazo.
 
-The commands are on the extension's toolbar (Import, Export, Options, Attributes, Settings), in the **Extensions** menu and in the right-click menu of a selected
-component. The two panels open from there (and from **Window ▸ Panels**).
+Each extension has its own toolbar and its commands in the **Extensions** menu; Options and
+Attributes are also in the right-click menu of a selected component, and open as side-tray
+panels (also from **Window ▸ Panels**).
 
 ## How close to SketchUp
 

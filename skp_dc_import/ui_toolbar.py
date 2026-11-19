@@ -41,12 +41,10 @@ def build(app, actions: dict) -> QToolBar | None:
         return None
     spec = (("import", "In", _FILE, "Import SketchUp keeping components"),
             ("export", "Out", _FILE, "Export SketchUp (.skp) with dynamic components"),
-            ("options", "Op", _EDIT, "Dynamic component options"),
-            ("attributes", "At", _EDIT, "Component attributes"),
             ("settings", "…", _CFG, "SketchUp .skp settings"))
-    bar = QToolBar("SketchUp components", window)
+    bar = QToolBar("SketchUp files", window)
     bar.setObjectName(OBJECT_NAME)
-    sep_after = {"export", "attributes"}
+    sep_after = {"export"}
     for key, glyph, color, tip in spec:
         act = actions.get(key)
         if act is None:

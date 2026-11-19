@@ -2,8 +2,8 @@
 argv: ext_repo start_tag expected_tag [overrides json: {"<root defn>": {"attr": value_in_stored_units}}]"""
 import sys, json
 sys.path[:0] = [sys.argv[1], '.']
-from skp_dc_import.dc import model as M
-from skp_dc_import.dc.redraw import redraw
+from dc_tools.dc import model as M
+from dc_tools.dc.redraw import redraw
 import dc_harness as H
 start = H.load(f'su_{sys.argv[2]}_geo.json', f'su_{sys.argv[2]}_vis.json')
 want = {r['defn']: r for r in H.load(f'su_{sys.argv[3]}_geo.json', f'su_{sys.argv[3]}_vis.json')}
