@@ -91,14 +91,33 @@ def setup(app):
         "Dynamic component options…", show_options,
         tip="Options of the selected SketchUp dynamic component.")
 
+    # Component Attributes: make dynamic, edit parts' attributes/formulas.
+    from .ui_author import AttributesPanel, selected_top
+    attr_panel = AttributesPanel(app)
+    attr_dock = app.add_panel("Component Attributes", attr_panel, start_hidden=True)
+
+    def show_attributes():
+        app.show_panel(attr_dock)
+        attr_panel.show_root(selected_top(app.viewport.scene), ())
+
+    app.add_menu_action(
+        "Component attributes…", show_attributes,
+        tip="Make the selected component dynamic and edit its attributes and formulas.")
+
     if hasattr(app, "add_context_menu"):
         def context(menu, selection):
-            if selected_root(app.viewport.scene) is None:
+            scene = app.viewport.scene
+            dyn = selected_root(scene) is not None
+            top = selected_top(scene) is not None
+            if not (dyn or top):
                 return
             from PySide6.QtCore import QTimer
             menu.addSeparator()
-            menu.addAction("Dynamic component options…",
-                           lambda: QTimer.singleShot(0, show_options))
+            if dyn:
+                menu.addAction("Dynamic component options…",
+                               lambda: QTimer.singleShot(0, show_options))
+            menu.addAction("Component attributes…",
+                           lambda: QTimer.singleShot(0, show_attributes))
         app.add_context_menu(context)
 
     def kind(group):

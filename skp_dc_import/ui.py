@@ -31,14 +31,40 @@ def selected_root(scene):
     return found
 
 
-def redraw_in_document(viewport, group, options: dict):
-    """Redraw ``group`` with ``options`` as ONE undo step; the new tree takes
-    its place in the document and in the selection. Returns the new group."""
+def replace_in_document(viewport, group, make_new):
+    """Swap ``group`` for ``make_new(scene)`` (a new group) as ONE undo
+    step, keeping its place in the document and in the selection."""
     from core.history import SnapshotImport
     box = {}
 
     def mutate(scene):
-        new, ev = A.redraw_group(group, options, scene)
+        new = make_new(scene)
+        i = scene.groups.index(group)
+        scene.groups[i] = new
+        scene.selection.discard(group)
+        scene.selection.add(new)
+        box["new"] = new
+
+    viewport.history.execute(SnapshotImport(mutate))
+    error = getattr(viewport.history, "last_error", None)
+    if error and "new" not in box:
+        raise RuntimeError(error)
+    notify = getattr(viewport, "notify_scene_changed", None)
+    if callable(notify):
+        notify()
+    viewport.update()
+    return box.get("new")
+
+
+def redraw_in_document(viewport, group, options: dict, edits: dict | None = None):
+    """Redraw ``group`` with ``options`` (and authoring ``edits``) as ONE
+    undo step; the new tree takes its place in the document and in the
+    selection. Returns (the new group, formula problems)."""
+    from core.history import SnapshotImport
+    box = {}
+
+    def mutate(scene):
+        new, ev = A.redraw_group(group, options, scene, edits)
         i = scene.groups.index(group)
         scene.groups[i] = new
         scene.selection.discard(group)
