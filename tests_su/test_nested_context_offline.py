@@ -13,8 +13,8 @@ from core.group import Group
 from core.history import History
 from core.mesh import Mesh
 from core.scene import Scene
-from skp_dc_import import ui, ui_author
-from skp_dc_import.dc import apply as A, author as AU
+from dc_tools import ui, ui_author
+from dc_tools.dc import apply as A, author as AU
 
 CM = 0.01
 fails = []

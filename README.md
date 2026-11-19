@@ -38,8 +38,11 @@ components and export it back.
   own, and how each one shows to users (label, access, units, list choices). The **?** button
   opens a help window: how the panel works, what each predefined attribute does, how to write
   formulas and every function with its syntax and an example.
+- Both panels also work on a component **inside an open group or component**: select it there
+  and edit it in place. A dynamic component inside an open dynamic component sees its parent
+  (`Parent!LenX`, its ancestors' and siblings' names), as in SketchUp.
 
-Every change is one undo step. Versions: skp_dc_import 0.6.0, dc_tools 0.3.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.6.0, dc_tools 0.3.1, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
