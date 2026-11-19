@@ -185,6 +185,11 @@ class AttributesPanel(QWidget):
         self.units.setToolTip("The units its formulas are written in")
         mk.addWidget(self.make_btn)
         mk.addWidget(self.units)
+        self.help_btn = QToolButton()
+        self.help_btn.setText("?")
+        self.help_btn.setToolTip("How this panel works, and what each function does")
+        self.help_btn.clicked.connect(self.show_help)
+        mk.addWidget(self.help_btn)
         outer.addLayout(mk)
         split = QSplitter(Qt.Vertical)
         self.tree = QTreeWidget()
@@ -226,6 +231,16 @@ class AttributesPanel(QWidget):
         self.timer.timeout.connect(self._poll)
         self.timer.start()
         self._refresh_enabled()
+
+    def show_help(self):
+        """The «?» button: a window of its own (non-modal, reused)."""
+        from .ui_help import HelpDialog
+        dlg = getattr(self, "_help", None)
+        if dlg is None:
+            dlg = self._help = HelpDialog(self.window())
+        dlg.show()
+        dlg.raise_()
+        dlg.activateWindow()
 
     # -- selection -------------------------------------------------------------
     def _poll(self):

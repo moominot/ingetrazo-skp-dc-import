@@ -33,9 +33,11 @@ components and export it back.
   way SketchUp's dialog does.
 - **Component Attributes**: **Make dynamic**, then per part: attributes with a value or a
   `=formula`, the predefined ones (X, Y, Z, LenX…, RotX…, Hidden, Material, Copies…) or your
-  own, and how each one shows to users (label, access, units, list choices).
+  own, and how each one shows to users (label, access, units, list choices). The **?** button
+  opens a help window: how the panel works, what each predefined attribute does, how to write
+  formulas and every function with its syntax and an example.
 
-Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.1.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.5.0, dc_tools 0.2.0, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Install
 
