@@ -44,6 +44,12 @@ components and export it back.
 
 Every change is one undo step. Versions: skp_dc_import 0.6.0, dc_tools 0.3.1, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
 
+## Releases
+
+The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `skp_dc_import-0.6.0.zip`), pinned by the catalog by
+commit and SHA-256. They do **not** contain `blank_v17.skp` (see «SketchUp files» above). Unpack one in IngeTrazo's plugins
+folder, or install it from **Extensions ▸ Manage extensions…**.
+
 ## Install
 
 Download `skp_dc_import-<version>.zip` and/or `dc_tools-<version>.zip` from the
