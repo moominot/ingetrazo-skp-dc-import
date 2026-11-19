@@ -22,7 +22,7 @@ from .dc import options as O
 from .dc.evaluate import _num
 from .dc.model import INCH
 from .dc.redraw import _LiveEvaluator
-from .ui import redraw_in_document, replace_in_document
+from .ui import context_members, redraw_in_document, replace_in_document
 
 _log = logging.getLogger(__name__)
 
@@ -36,10 +36,13 @@ ACCESS_LABELS = (("NONE", "Users cannot see this attribute"),
 
 
 def selected_top(scene):
+    """The one selected group or component of the current context (the
+    top level, or the open group's parts), else None."""
+    members = context_members(scene)
     found = None
     for e in getattr(scene, "selection", ()) or ():
         g = getattr(e, "owner", None) or e
-        if g in getattr(scene, "groups", ()):
+        if any(g is m for m in members):
             if found is not None and found is not g:
                 return None
             found = g
@@ -337,7 +340,7 @@ class AttributesPanel(QWidget):
             attrs = AU.merged(g)
             unit = self._part_unit(attrs)
             try:
-                tree = A.part_tree(self.root)
+                tree = A.part_in_context(self.app.viewport.scene, self.root)[0]
                 part = tree
                 for i in self.path:
                     part = part.children[i]
@@ -452,7 +455,7 @@ class AttributesPanel(QWidget):
         if name in ("x", "y", "z", "lenx", "leny", "lenz"):
             # Starts at what the part measures now, as SketchUp does.
             try:
-                tree = A.part_tree(self.root)
+                tree = A.part_in_context(self.app.viewport.scene, self.root)[0]
                 part = tree
                 for i in self.path:
                     part = part.children[i]
