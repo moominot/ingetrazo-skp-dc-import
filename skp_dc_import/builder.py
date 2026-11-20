@@ -45,6 +45,12 @@ def _mesh_from(faces, soft_edges, loose_edges):
             continue
         if attrs:
             face.attrs.update(attrs)
+            if not isinstance(face.attrs.get("layer", ""), str):
+                # Some newer files give a face's layer as openSKP's internal
+                # number (IVAR+set-up.skp: 170280742), not a name. A layer
+                # that is not a name broke IngeTrazo's layers panel while it
+                # painted its swatch, and Qt aborted a moment later.
+                del face.attrs["layer"]
     for a, b in soft_edges or ():
         va, vb = mesh.vertex_at(q(a)), mesh.vertex_at(q(b))
         if va is None or vb is None or va is vb:
@@ -207,7 +213,7 @@ def build(scene, model, path) -> dict:
         group.xform = so._matrix(inst.matrix)
         group.component = not getattr(defn, "is_group", False)
         layer = getattr(inst, "layer", "") or ""
-        if layer and layer != "Layer0":
+        if isinstance(layer, str) and layer and layer != "Layer0":
             group.layer = layer
         group.hidden = bool(getattr(inst, "hidden", False))
         report["placements"] += 1

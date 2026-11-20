@@ -11,7 +11,7 @@ a separate extension. This one needs neither OpenSKP nor any .skp file.
 """
 from __future__ import annotations
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 import logging
 
@@ -86,6 +86,14 @@ def setup(app):
 
     if hasattr(app, "add_outliner_kind"):
         app.add_outliner_kind(kind)
+
+    # Scaling a dynamic component: only the handles its ScaleTool allows,
+    # and a redraw at the new size instead of a stretch.
+    try:
+        from . import scale_guard
+        scale_guard.install(app)
+    except Exception:  # noqa: BLE001 - scaling stays as IngeTrazo does it
+        _log.exception("could not set up scaling of dynamic components")
 
     try:
         from . import ui_toolbar

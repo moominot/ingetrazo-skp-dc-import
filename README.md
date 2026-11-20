@@ -8,8 +8,7 @@ install independently:
 |---|---|---|
 | **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
 | **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
-
-| **Components manager** | `asset_manager/` | A tray tab with the components in the drawing (preview, count, ⚙ on dynamic ones, *Select*) and a catalog of your own models (a folder of `.igz` with optional `.png` previews, *Insert*). |
+| **Components manager** | `asset_manager/` | A tray tab: the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models). |
 
 None imports another. Installed together, you can import a `.skp`, edit its dynamic
 components and export it back.
@@ -41,22 +40,61 @@ components and export it back.
 - Both panels also work on a component **inside an open group or component**: select it there
   and edit it in place. A dynamic component inside an open dynamic component sees its parent
   (`Parent!LenX`, its ancestors' and siblings' names), as in SketchUp.
+- **Scaling** a dynamic component with IngeTrazo's Scale tool: only the handles its `ScaleTool`
+  attribute allows are shown (bits 1 X, 2 Y, 4 Z, 8 XY, 16 XZ, 32 YZ, 64 uniform hide a
+  handle), and once scaled — by a handle, a typed value or anything else — it is redrawn at
+  its new size (copies, parts that keep their size, formulas) instead of stretched, in the
+  same undo step as the scale; the result is the same as typing its LenX/LenY/LenZ.
 
-Every change is one undo step. Versions: skp_dc_import 0.6.2, dc_tools 0.3.3, asset_manager 0.1.0, for IngeTrazo 0.6 (Extension API 2).
+## Components manager (`asset_manager`)
+
+- **In drawing**: every component of the document once, with a preview and how many there are
+  (the parts inside a dynamic component are not listed). **Select all** selects every instance
+  that can be selected where you are editing and says how many are inside other groups; the
+  same from the view's right-click menu, **Select all instances of «…»**. **Place copy**, or
+  dragging an entry onto the view, places another instance of it.
+- **My catalog**: folders of your own models, `.igz` and `.skp` (add them with **+**). A `.skp`
+  shows the preview it carries; any model can have a `.png` with the same name next to it.
+  Double-click, **Insert** or drag onto the view; a `.skp` comes in keeping its components and
+  dynamic data when the `skp_dc_import` extension is installed. When you add a folder you choose
+  whether it is **watched in real time** (a model saved or downloaded into it shows at once,
+  marked ●) or read again with **Update**. Downloads as they come are understood too: a `.skp`
+  or `.igz` **inside a `.zip`** is listed and taken out only when inserted, and a **material
+  set** downloaded from any site — a folder or zip with a colour image and its maps (normal,
+  roughness, AO, displacement…, recognised by the words in their names) — shows as a
+  material: Insert loads the paint bucket with it, its maps copied with a `.pbr.json` manifest
+  for Render Studio (the user's folder is left as it is).
+- A `.skp` **dragged from the file explorer** onto the view also goes through the `.skp`
+  extension's importer (it keeps its components and dynamic data) and follows the cursor to be
+  placed, instead of the window's own importer, which flattens it.
+- **Open a model site** opens, in your browser, the sites you list in **⚙ Settings**
+  (Extensions ▸ Components manager settings…). Download into a watched folder — your Downloads
+  folder, for instance — and the model is in the catalog, ready to drag onto the view.
+- **Online** — free CC0 assets from **Poly Haven** (polyhaven.com: HDRIs, materials, 3-D
+  models) and **ambientCG** (ambientcg.com: materials). **HDRIs** become Render Studio's 360°
+  background; **materials** come with all their maps (colour, normal, roughness, AO,
+  displacement, metal…) and load the paint bucket with the colour image at the material's real
+  size, with a `<colour image>.pbr.json` manifest next to it naming the other maps for a
+  renderer; **3-D models** (glTF) follow the cursor to be placed. Each source is reached only
+  on its own servers, over https (redirects checked one by one); downloads are checked (MD5
+  where the source gives it), kept in the extension's folder and reused. From an ambientCG zip
+  only the map images are taken out.
+
+Every change is one undo step. Versions: skp_dc_import 0.6.3, dc_tools 0.3.4, asset_manager 0.2.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Releases
 
-The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`), pinned by the catalog by
+The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `dc_tools-0.3.4.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`, `skp_dc_import-0.6.3.zip`, `asset_manager-0.2.0.zip`), pinned by the catalog by
 commit and SHA-256. They do **not** contain `blank_v17.skp` (see «SketchUp files» above). Unpack one in IngeTrazo's plugins
 folder, or install it from **Extensions ▸ Manage extensions…**.
 
 ## Install
 
-Download `skp_dc_import-<version>.zip` and/or `dc_tools-<version>.zip` from the
+Download `skp_dc_import-<version>.zip`, `dc_tools-<version>.zip` and/or `asset_manager-<version>.zip` from the
 [releases](https://github.com/moominot/ingetrazo-skp-dc-import/releases) and unpack each in
 IngeTrazo's plugins folder (**Extensions ▸ Open plugins folder**; `%APPDATA%\IngeTrazo\plugins\`
-on Windows), so that `…/plugins/skp_dc_import/__init__.py` and/or `…/plugins/dc_tools/__init__.py`
-exist. Restart IngeTrazo.
+on Windows), so that `…/plugins/skp_dc_import/__init__.py`, `…/plugins/dc_tools/__init__.py` and/or
+`…/plugins/asset_manager/__init__.py` exist. Restart IngeTrazo.
 
 Each extension has its own toolbar and its commands in the **Extensions** menu; Options and
 Attributes are also in the right-click menu of a selected component, and open as side-tray

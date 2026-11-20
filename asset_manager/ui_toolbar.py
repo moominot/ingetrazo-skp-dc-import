@@ -39,7 +39,8 @@ def build(app, actions: dict) -> QToolBar | None:
     window = getattr(app, "window", None)
     if window is None or not hasattr(window, "addToolBar"):
         return None
-    spec = (("open", "Co", _FILE, "Components manager"),)
+    spec = (("open", "Co", _FILE, "Components manager"),
+            ("polyhaven", "On", _EDIT, "Online assets: HDRIs, materials and models"))
     bar = QToolBar("Components", window)
     bar.setObjectName(OBJECT_NAME)
     sep_after = set()
