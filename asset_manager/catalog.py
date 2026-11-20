@@ -148,6 +148,20 @@ def set_watched(path, on: bool) -> None:
 
 # --- model sites -------------------------------------------------------------------
 _SITES_KEY = "asset_manager/sites"
+_PROXY_KEY = "asset_manager/as_proxy"
+
+
+def as_proxy() -> bool:
+    """Whether models from the catalog and online go in as proxies."""
+    try:
+        v = _settings().value(_PROXY_KEY, False)
+    except Exception:  # noqa: BLE001
+        return False
+    return v is True or str(v).lower() in ("true", "1")
+
+
+def set_as_proxy(on: bool) -> None:
+    _settings().setValue(_PROXY_KEY, bool(on))
 
 
 def valid_url(url: str) -> bool:

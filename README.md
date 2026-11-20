@@ -8,7 +8,7 @@ install independently:
 |---|---|---|
 | **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
 | **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
-| **Components manager** | `asset_manager/` | A tray tab: the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models). |
+| **Components manager** | `asset_manager/` | A tray tab: the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models); heavy models as light **proxies** (an envelope in the drawing, the full model in an `.igz` of its own and in the render). |
 
 None imports another. Installed together, you can import a `.skp`, edit its dynamic
 components and export it back.
@@ -79,12 +79,39 @@ components and export it back.
   on its own servers, over https (redirects checked one by one); downloads are checked (MD5
   where the source gives it), kept in the extension's folder and reused. From an ambientCG zip
   only the map images are taken out.
+- **As proxy** (a check box on My catalog and on Online's 3-D models): the model goes in as a
+  light **envelope** in its place (its convex hull through some 64 of its outermost points, the
+  gentle folds smooth; a rectangle for a flat model), and the full model is kept in an `.igz` of
+  its own — in
+  `<drawing>_proxies` next to a saved drawing (its path kept relative, so the project folder
+  moves as a whole), in the extension's folder while the drawing has never been saved. The same
+  model inserted again is a copy of the proxy already there. Good for heavy downloads (trees,
+  furniture). A model holding **dynamic components** asks first: as a proxy their options and
+  formulas cannot be changed until the original is shown again (while dragging it goes in as a
+  proxy and the status line says so). The data follows the
+  [Proxies extension](https://github.com/PESI3D/ingetrazo-proxies) (`ext["proxy_tool"]`), so its
+  Show Originals / Show Proxies work on these proxies, and a renderer can swap the original in.
+- **Right-click menu** on objects at the top level of the drawing — one undo step each:
+  **Make proxy** (the object and every copy of its component become one proxy; name, place,
+  layer, paint and lights stay; objects holding dynamic components ask first, and their dynamic
+  data waits with the original), **Show original** (the full model back from its file, its
+  materials registered, still marked as a proxy), **Show proxy** (back to the envelope; an
+  original edited meanwhile is saved to its file first), **Open original in a new tab** (its
+  `.igz` as a project of its own: edit it there and save; when the drawing comes back to the
+  front, its proxies take the change — a new envelope, one undo step — and Show original and the
+  render bring the edited model).
 
-Every change is one undo step. Versions: skp_dc_import 0.6.3, dc_tools 0.3.4, asset_manager 0.2.0, for IngeTrazo 0.6 (Extension API 2).
+![Online tab with «As proxy»](docs/asset_manager_online.png)
+
+![A table set as a proxy (left: its envelope) and as the full model (right)](docs/asset_manager_proxies.png)
+
+![The right-click menu on a proxy](docs/asset_manager_proxy_menu.png)
+
+Every change is one undo step. Versions: skp_dc_import 0.6.3, dc_tools 0.3.4, asset_manager 0.3.0, for IngeTrazo 0.6 (Extension API 2).
 
 ## Releases
 
-The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `dc_tools-0.3.4.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`, `skp_dc_import-0.6.3.zip`, `asset_manager-0.2.0.zip`), pinned by the catalog by
+The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `dc_tools-0.3.4.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`, `skp_dc_import-0.6.3.zip`, `asset_manager-0.2.0.zip`, `asset_manager-0.3.0.zip`), pinned by the catalog by
 commit and SHA-256. They do **not** contain `blank_v17.skp` (see «SketchUp files» above). Unpack one in IngeTrazo's plugins
 folder, or install it from **Extensions ▸ Manage extensions…**.
 
@@ -123,7 +150,11 @@ difference: a stair landing's base, which SketchUp leaves unstretched when the s
 
 `tests_su/` holds the comparison scripts. They need SketchUp dumps of your own models (not
 included), except `test_author_offline.py`, whose cabinet is built the same way in both
-programs.
+programs, and the Components manager's own tests, run with IngeTrazo's source:
+`test_asset_manager_offline.py`, `test_proxy_offline.py` (inserting as a proxy) and
+`test_proxy_ops_offline.py` (Make proxy, Show original, Show proxy, Open original in a new tab, undo,
+copies, dynamic components). The last two take, as a third argument, the Proxies extension's
+`proxy_tool.py` to check that its commands work on these proxies too.
 
 ## Export to SketchUp
 
@@ -174,3 +205,6 @@ GPL-3.0-or-later.
   IngeTrazo contributors), adapted.
 - The vendored OpenSKP keeps its MIT licence (`_vendor/openskp/LICENSE`).
 - Faces, materials and textures are read with IngeTrazo's own `.skp` adapter.
+- Proxies inserted by `asset_manager` use the data format of PESI3D's
+  [Proxies](https://github.com/PESI3D/ingetrazo-proxies) extension (GPL-3.0-or-later); no code is
+  taken from it.

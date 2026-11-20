@@ -10,9 +10,10 @@ from PySide6.QtCore import QMimeData, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices, QDrag, QIcon, QPixmap, QVector3D
 from PySide6.QtCore import QFileSystemWatcher
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QApplication, QComboBox, QHBoxLayout, QLabel, QLineEdit,
-                               QListWidget, QListWidgetItem, QMenu, QPushButton, QStyle,
-                               QTabWidget, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QHBoxLayout, QLabel,
+                               QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox,
+                               QPushButton, QStyle, QTabWidget, QToolButton, QVBoxLayout,
+                               QWidget)
 
 from . import ambientcg, catalog, inventory, online, place, polyhaven, thumbs
 SOURCES = (polyhaven, ambientcg)
@@ -24,6 +25,10 @@ PH_ICON = 96
 DYN_MARK = "⚙ "          # dynamic components wear this in the list
 DONE_ROLE = Qt.UserRole + 1
 ORIGIN = QVector3D(0.0, 0.0, 0.0)
+PROXY_TIP = ("Insert a light envelope (its outer shape, without detail) in the model's place; the full model is kept in an .igz file "
+             "next to the drawing (folder «<drawing>_proxies») and the render uses it. "
+             "Good for heavy models such as trees and furniture. Dynamic components inside "
+             "cannot be changed while the model is a proxy.")
 
 
 class DragList(QListWidget):
@@ -139,6 +144,8 @@ class AssetPanel(QWidget):
         self._known: set = set()
         self._new_paths: set = set()
         self._watcher = None
+        self._proxy_boxes: list = []
+        self._note = ""
         self._watch_timer = QTimer(self)
         self._watch_timer.setSingleShot(True)
         self._watch_timer.setInterval(1200)     # a download lands in several steps
@@ -176,12 +183,100 @@ class AssetPanel(QWidget):
         return self._app.viewport
 
     def _place(self, group, anchor):
+        note, self._note = self._note, ""
         if group is None:
-            self._say("The model has no geometry.")
+            if not note:
+                self._say("The model has no geometry.")
             return
         place.start_place(self._app.window, group, anchor)
-        self._say("Click in the view to place it (Esc cancels). "
+        self._say((note + " " if note else "") + "Click in the view to place it (Esc cancels). "
                   "You can also drag it from the list onto the view.")
+
+    # --- as a proxy ------------------------------------------------------------------
+    def _proxy_box(self):
+        """An «As proxy» check box; every tab's shows the same setting."""
+        box = QCheckBox("As proxy")
+        box.setToolTip(PROXY_TIP)
+        box.setChecked(catalog.as_proxy())
+        box.toggled.connect(self._proxy_toggled)
+        self._proxy_boxes.append(box)
+        return box
+
+    def _proxy_toggled(self, on):
+        catalog.set_as_proxy(on)
+        for b in self._proxy_boxes:
+            if b.isChecked() != on:
+                b.blockSignals(True)
+                b.setChecked(on)
+                b.blockSignals(False)
+
+    def _confirm_dynamic(self, name):
+        """Asked before a model with dynamic components goes in as a proxy."""
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Insert as proxy")
+        box.setText(f"«{name}» holds dynamic components.")
+        box.setInformativeText(
+            "As a proxy, its options and formulas cannot be changed: the drawing holds only "
+            "its envelope until the original is shown again. Insert it as a proxy anyway?")
+        as_proxy = box.addButton("Insert as proxy", QMessageBox.AcceptRole)
+        normal = box.addButton("Insert the full model", QMessageBox.ActionRole)
+        box.addButton(QMessageBox.Cancel)
+        box.setDefaultButton(normal)
+        QApplication.setOverrideCursor(Qt.ArrowCursor)
+        try:
+            box.exec()
+        finally:
+            QApplication.restoreOverrideCursor()
+        clicked = box.clickedButton()
+        return "proxy" if clicked is as_proxy else "normal" if clicked is normal else None
+
+    def confirm_dynamic_many(self, names):
+        """Asked before objects holding dynamic components become proxies."""
+        shown = ", ".join(f"«{n}»" for n in names[:4]) + ("…" if len(names) > 4 else "")
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Make proxy")
+        box.setText(f"{shown} hold{'s' if len(names) == 1 else ''} dynamic components.")
+        box.setInformativeText(
+            "As a proxy, their options and formulas cannot be changed: the drawing holds only "
+            "the envelope until the original is shown again (right-click ▸ Show original). "
+            "Make proxies anyway?")
+        yes = box.addButton("Make proxy", QMessageBox.AcceptRole)
+        box.addButton(QMessageBox.Cancel)
+        box.setDefaultButton(QMessageBox.Cancel)
+        QApplication.setOverrideCursor(Qt.ArrowCursor)
+        try:
+            box.exec()
+        finally:
+            QApplication.restoreOverrideCursor()
+        return box.clickedButton() is yes
+
+    def _model_group(self, path, interactive=True):
+        """The component to place for the model file ``path``: the model
+        itself, or its proxy when «As proxy» is on. ``interactive``: a model
+        with dynamic components asks first (not while dragging: it then
+        goes in as a proxy and the status line says so)."""
+        if not catalog.as_proxy():
+            return place.group_from_file(self._vp, path)
+        g, kind, dynamic = place.proxy_from_file(
+            self._vp, path, self._confirm_dynamic if interactive else None)
+        if g is None:
+            self._note = "Cancelled." if dynamic else ""
+        elif kind == "normal":
+            self._note = f"«{g.name}» goes in as the full model."
+        else:
+            from . import proxy
+            info = proxy.info_of(g) or {}
+            where = Path(info.get("file") or "").parent
+            self._note = (f"«{g.name}» goes in as a proxy (its envelope; the full model, "
+                          f"{info.get('faces', 0):,} faces, is kept in {where}).")
+            if dynamic:
+                self._note += " Its dynamic components cannot be changed while it is a proxy."
+        if not interactive and self._note:
+            self._say(self._note)
+            self._note = ""
+        return g
 
     def _document_changed(self, *_a):
         self.drop.watch_all()               # a new project tab has a new view
@@ -342,6 +437,7 @@ class AssetPanel(QWidget):
                     self.refresh_catalog),
             _button("Insert", "The chosen model follows the cursor; a click places it",
                     self.insert_current),
+            self._proxy_box(),
             self.site_btn))
         self.cat_info = QLabel()
         self.cat_info.setWordWrap(True)
@@ -542,7 +638,7 @@ class AssetPanel(QWidget):
     def _build_from(self, path):
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            return place.group_from_file(self._vp, path)
+            return self._model_group(path)
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -582,7 +678,7 @@ class AssetPanel(QWidget):
         item = it.data(Qt.UserRole)
         if item.maps:
             return None                     # a material is painted, not dragged
-        return lambda: (place.group_from_file(self._vp, self._model_file(item)), ORIGIN)
+        return lambda: (self._model_group(self._model_file(item), interactive=False), ORIGIN)
 
     # =========================================================================
     # Online: Poly Haven, ambientCG
@@ -624,7 +720,8 @@ class AssetPanel(QWidget):
         v.addWidget(self.ph_list, 1)
         self.ph_action = _button("Use", "", lambda: self._ph_use(self.ph_list.currentItem()))
         web = _button("Web page", "Open the asset's page on its site", self._ph_web)
-        v.addLayout(_row(self.ph_action, web, stretch_first=True))
+        self.ph_proxy = self._proxy_box()
+        v.addLayout(_row(self.ph_action, self.ph_proxy, web, stretch_first=True))
         self.ph_credit = QLabel()
         self.ph_credit.setOpenExternalLinks(True)
         self.ph_credit.setWordWrap(True)
@@ -727,6 +824,7 @@ class AssetPanel(QWidget):
         }.get(kind, ("Use", ""))
         self.ph_action.setText(text)
         self.ph_action.setToolTip(tip)
+        self.ph_proxy.setVisible(kind == "models")
 
     def _ph_web(self):
         it = self.ph_list.currentItem()
@@ -741,7 +839,7 @@ class AssetPanel(QWidget):
         main = self._source().cached("models", e, self.ph_res.currentData())
         if main is None:
             return None
-        return lambda: (place.group_from_file(self._vp, main), ORIGIN)
+        return lambda: (self._model_group(main, interactive=False), ORIGIN)
 
     def _ph_use(self, it):
         if it is None:
