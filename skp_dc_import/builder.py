@@ -26,44 +26,135 @@ KEY = "skp_dc_import"
 _MAX_DEPTH = 32
 
 
-def _mesh_from(faces, soft_edges, loose_edges):
-    """A Mesh from ``(outer, holes, attrs)`` faces in local metres, with the
-    file's soft edges marked and its loose lines added (the per-face path of
-    ``formats.skp.apply_payload``)."""
-    from PySide6.QtGui import QVector3D
-    from core.mesh import Mesh
+#: Below this many faces the per-face path costs nothing and the numpy
+#: set-up of the bulk one does not pay.
+_BULK_MIN_FACES = 16
 
-    def q(p):
-        return p if hasattr(p, "x") else QVector3D(p[0], p[1], p[2])
+
+def _q(p):
+    from PySide6.QtGui import QVector3D
+    return p if hasattr(p, "x") else QVector3D(p[0], p[1], p[2])
+
+
+def _face_attrs(attrs):
+    """A face's attrs as the file gives them, with the layer fixed: some
+    newer files give a face's layer as openSKP's internal number
+    (IVAR+set-up.skp: 170280742), not a name. A layer that is not a name
+    broke IngeTrazo's layers panel while it painted its swatch, and Qt
+    aborted a moment later."""
+    if not attrs:
+        return None
+    out = dict(attrs)
+    if not isinstance(out.get("layer", ""), str):
+        del out["layer"]
+    return out
+
+
+def _faces_slow(faces):
+    """The per-face path: one ``Mesh.add_face`` each, a degenerate polygon
+    skipped. Exact, and slow (about 60 µs a face)."""
+    from core.mesh import Mesh
 
     mesh = Mesh()
     for outer, holes, attrs in faces:
         try:
-            face = mesh.add_face([q(p) for p in outer],
-                                 [[q(p) for p in h] for h in holes] if holes else None)
+            face = mesh.add_face([_q(p) for p in outer],
+                                 [[_q(p) for p in h] for h in holes] if holes else None)
         except Exception:  # noqa: BLE001 - a degenerate polygon is skipped
             continue
+        attrs = _face_attrs(attrs)
         if attrs:
             face.attrs.update(attrs)
-            if not isinstance(face.attrs.get("layer", ""), str):
-                # Some newer files give a face's layer as openSKP's internal
-                # number (IVAR+set-up.skp: 170280742), not a name. A layer
-                # that is not a name broke IngeTrazo's layers panel while it
-                # painted its swatch, and Qt aborted a moment later.
-                del face.attrs["layer"]
-    for a, b in soft_edges or ():
-        va, vb = mesh.vertex_at(q(a)), mesh.vertex_at(q(b))
-        if va is None or vb is None or va is vb:
-            continue
-        edge = mesh.find_edge(va, vb)
-        if edge is not None:
-            edge.soft = True
+    return mesh
+
+
+def _faces_bulk(faces, soft_edges=None):
+    """The same mesh in one vectorized pass (``Mesh.bulk_weld`` +
+    ``add_faces_welded``, what IngeTrazo's .igz and glTF readers use), the
+    file's soft edges marked in the same pass. ``add_faces_welded`` is the
+    vectorized equivalent of ``add_face`` per face, so a polygon the
+    per-face path keeps (a tiny side that welds shut, say) is kept alike.
+
+    ``None`` when a soft edge ends where no face has a vertex: the per-face
+    path ignores such an edge one by one, which the bulk one cannot, so the
+    caller falls back to it for this mesh."""
+    import numpy as np
+    from PySide6.QtGui import QVector3D
+    from core.mesh import Mesh
+
+    def xyz(p):
+        return (p.x(), p.y(), p.z()) if hasattr(p, "x") else (p[0], p[1], p[2])
+
+    flat, ring_sizes, ring_counts, attrs_list = [], [], [], []
+    for outer, holes, attrs in faces:
+        rings = [[xyz(p) for p in outer]]
+        if holes:
+            hs = [[xyz(p) for p in h] for h in holes]
+            if len(hs) > 1:
+                from core.topology import _maximal_holes
+                kept = _maximal_holes([[QVector3D(*v) for v in h] for h in hs])
+                hs = [[(p.x(), p.y(), p.z()) for p in h] for h in kept]
+            rings.extend(hs)
+        ring_counts.append(len(rings))
+        for r in rings:
+            ring_sizes.append(len(r))
+            flat.extend(r)
+        attrs_list.append(_face_attrs(attrs))
+    mesh = Mesh()
+    if not flat:
+        return mesh
+    n_face_pts = len(flat)
+    soft = [p for a, b in (soft_edges or ()) for p in (xyz(a), xyz(b))]
+    vobjs, inverse = mesh.bulk_weld(np.array(flat + soft, dtype=np.float64))
+    face_inv, soft_inv = inverse[:n_face_pts], inverse[n_face_pts:]
+    if len(soft_inv) and not bool(np.isin(soft_inv, face_inv).all()):
+        return None
+    mesh.add_faces_welded(vobjs, face_inv, np.array(ring_sizes, dtype=np.int64),
+                          np.array(ring_counts, dtype=np.int64), attrs_list)
+    if len(soft_inv):
+        u = len(vobjs)
+        vid = {id(v): i for i, v in enumerate(vobjs)}
+        emap = {}
+        for e in mesh.edges:
+            i0, i1 = vid.get(id(e.v0)), vid.get(id(e.v1))
+            if i0 is not None and i1 is not None:
+                emap.setdefault(i0 * u + i1 if i0 <= i1 else i1 * u + i0, e)
+        a, b = soft_inv[0::2], soft_inv[1::2]
+        keys = np.where(a <= b, a * u + b, b * u + a)
+        for ia, ib, key in zip(a.tolist(), b.tolist(), keys.tolist()):
+            if ia == ib:
+                continue
+            edge = emap.get(key)
+            if edge is not None:
+                edge.soft = True
+    return mesh
+
+
+def _mesh_from(faces, soft_edges, loose_edges):
+    """A Mesh from ``(outer, holes, attrs)`` faces in local metres, with the
+    file's soft edges marked and its loose lines added (the same result as
+    the per-face path of ``formats.skp.apply_payload``, built in bulk when
+    it can be)."""
+    faces = faces if isinstance(faces, list) else list(faces)
+    soft_edges = soft_edges if isinstance(soft_edges, list) else list(soft_edges or ())
+    mesh = (_faces_bulk(faces, soft_edges)
+            if len(faces) >= _BULK_MIN_FACES else None)
+    if mesh is None:
+        mesh = _faces_slow(faces)
+        for a, b in soft_edges:
+            va, vb = mesh.vertex_at(_q(a)), mesh.vertex_at(_q(b))
+            if va is None or vb is None or va is vb:
+                continue
+            edge = mesh.find_edge(va, vb)
+            if edge is not None:
+                edge.soft = True
     for a, b in loose_edges or ():
         try:
-            mesh.add_edge(q(a), q(b))
+            mesh.add_edge(_q(a), _q(b))
         except ValueError:          # both ends weld to one vertex
             continue
     return mesh
+
 
 
 class _FrontUnpainted:
