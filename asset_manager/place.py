@@ -61,6 +61,56 @@ def _from_scene(dst, temp, name):
 def group_from_file(viewport, path):
     """A new component (not yet in the drawing) read from ``path``; its
     anchor is the file's origin. None when the file has no geometry."""
+    path = Path(path)
+    temp = read_file(viewport, path)
+    return _from_scene(viewport.scene, temp, path.stem)
+
+
+def proxy_from_file(viewport, path, confirm=None):
+    """``(group, kind, dynamic)`` for the model in ``path`` inserted as a
+    proxy: a new component holding a light envelope, the full model written to an
+    .igz of its own (see :mod:`.proxy`). ``dynamic`` = the model holds
+    dynamic components, which cannot be changed while it is a proxy.
+
+    ``kind``: ``"proxy"``; ``"copy"`` when that model is already in the
+    drawing as a proxy (placed again as a copy of it: one definition,
+    nothing read); ``"normal"`` when ``confirm`` chose the full model.
+    ``confirm(name)`` is asked only for a model with dynamic components and
+    answers ``"proxy"``, ``"normal"`` or None (cancel: group None); without
+    it such a model goes in as a proxy. group None also = no geometry."""
+    from . import proxy
+    path = Path(path)
+    same = proxy.find_in(viewport.scene, proxy.proxy_id(path))
+    if same is not None:
+        return copy_of(same), "copy", bool(proxy.info_of(same).get("dynamic"))
+    temp = read_file(viewport, path)
+    groups = list(getattr(temp, "groups", ()) or ())
+    if clean_layers(groups):
+        _log.warning("%s: layer labels that were not names were dropped", path.name)
+    if len(groups) == 1 and getattr(groups[0], "xform", None) is not None:
+        g = groups[0]
+    else:
+        from core.insert import component_from_scene
+        g = component_from_scene(temp, path.stem)
+    if g is None:
+        return None, "proxy", False
+    dynamic = proxy.has_dynamic(g)
+    if dynamic and confirm is not None:
+        answer = confirm(g.name or path.stem)
+        if answer is None:
+            return None, "proxy", True
+        if answer == "normal":
+            from core.insert import ensure_layers, merge_materials
+            merge_materials(getattr(temp, "materials", {}) or {}, viewport.scene.materials, g)
+            ensure_layers(viewport.scene, g)
+            return g, "normal", True
+    # The file's materials stay with the original: the drawing gets none
+    # until the original is shown.
+    return proxy.make(viewport, g, getattr(temp, "materials", {}) or {}, path), "proxy", dynamic
+
+
+def read_file(viewport, path):
+    """The model in ``path`` as a scene of its own (not the drawing's)."""
     from core.scene import Scene
     path = Path(path)
     suffix = path.suffix.lower()
@@ -85,7 +135,7 @@ def group_from_file(viewport, path):
     end = getattr(viewport, "end_group_edit", None)
     if callable(end):
         end()
-    return _from_scene(viewport.scene, temp, path.stem)
+    return temp
 
 
 def copy_of(group):
