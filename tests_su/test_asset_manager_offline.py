@@ -72,6 +72,24 @@ painted = sum(1 for x in range(64) for y in range(64) if img.pixelColor(x, y).al
 ok(painted > 300, f"thumbnail has content ({painted} px)")
 ok(thumbs.render(Group(Mesh(), name="buit"), 64).toImage().pixelColor(32, 32).alpha() == 0, "empty component -> blank thumbnail")
 
+# A big tree must never be merged into one mesh just to draw an icon: on a
+# 3.6 M-face component world_mesh took tens of seconds (2026-11-20, the user's model).
+import core.group as _cg
+_real_world_mesh = _cg.world_mesh
+def _forbidden(*_a, **_k):
+    raise AssertionError("thumbs.render must not merge placements")
+_cg.world_mesh = _forbidden
+try:
+    import time as _time
+    t0 = _time.perf_counter()
+    px = thumbs.render(entries[0].sample, 64)
+    img = px.toImage()
+    painted = sum(1 for x in range(64) for y in range(64) if img.pixelColor(x, y).alpha() > 0)
+    ok(painted > 300, f"thumbnail drawn without world_mesh ({painted} px)")
+    ok(_time.perf_counter() - t0 < 2.0, "thumbnail of a small component is fast")
+finally:
+    _cg.world_mesh = _real_world_mesh
+
 # --- catalog -----------------------------------------------------------------------
 cat = catalog.default_folder(); cat.mkdir(parents=True)
 (cat / "porta.igz").write_bytes(b"x"); (cat / "porta.png").write_bytes(b"")
