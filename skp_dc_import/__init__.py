@@ -44,6 +44,10 @@ def _summary(report: dict) -> str:
     roots = report.get("dynamic_roots") or []
     text = (f"{report.get('placements', 0)} components and groups, "
             f"{report.get('dynamic', 0)} of them with dynamic attributes.")
+    if report.get("scenes"):
+        text += f"\n{report['scenes']} scenes, as saved views."
+    if report.get("lights"):
+        text += f"\n{report['lights']} Enscape lights, as Render Studio lights."
     if roots:
         text += "\nDynamic components: " + ", ".join(roots[:12])
         if len(roots) > 12:

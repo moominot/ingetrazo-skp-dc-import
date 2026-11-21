@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import reader
+from . import enscape_lights, reader
 
 KEY = "skp_dc_import"
 _MAX_DEPTH = 32
@@ -222,6 +222,49 @@ def _register_materials(scene, materials, attr_map) -> None:
                 attrs["mat"] = remap[attrs["mat"]]
 
 
+_INCH = 0.0254
+
+
+def scene_records(model) -> list:
+    """The file's saved scenes (SketchUp «Scenes» tabs) as plain dicts: camera
+    in metres, plus the layers a scene hides. A scene without a camera is
+    skipped. The same reading as IngeTrazo's own .skp import."""
+    out = []
+    for pg in getattr(model, "pages", None) or []:
+        if getattr(pg, "eye", None) is None or getattr(pg, "target", None) is None:
+            continue
+        out.append({
+            "name": pg.name or f"Scene {len(out) + 1}",
+            "eye": [c * _INCH for c in pg.eye],
+            "target": [c * _INCH for c in pg.target],
+            "up": list(getattr(pg, "up", None) or (0.0, 0.0, 1.0)),
+            "fov": getattr(pg, "fov", 35.0),
+            "parallel": getattr(pg, "parallel", False),
+            "ortho_height": getattr(pg, "ortho_height", 0.0) * _INCH,
+            "hidden_layers": list(getattr(pg, "hidden_layers", None) or []),
+        })
+    return out
+
+
+def _register_scenes(scene, model) -> int:
+    """The file's scenes into the scene's saved views; a name already there
+    is left alone (a re-import). Returns how many were added."""
+    from core.saved_views import from_lookat
+    existing = {v.name for v in scene.saved_views}
+    added = 0
+    for raw in scene_records(model):
+        if raw["name"] in existing:
+            continue
+        scene.saved_views.append(from_lookat(
+            raw["name"], raw["eye"], raw["target"], raw["up"],
+            fov_deg=raw["fov"], perspective=not raw["parallel"],
+            ortho_height=raw["ortho_height"] or None,
+            hidden_layers=raw["hidden_layers"]))
+        existing.add(raw["name"])
+        added += 1
+    return added
+
+
 def _register_layers(scene, model, so) -> None:
     from core.layers import Layer
     known = {ly.name for ly in scene.layers}
@@ -259,11 +302,13 @@ def build(scene, model, path) -> dict:
                 so._mark_projected_faces(d, attr_map)
     _register_materials(scene, materials, attr_map)
     _register_layers(scene, model, so)
+    scenes_added = _register_scenes(scene, model)
 
     identity = QMatrix4x4()
     meshes: dict = {}
     report = {"placements": 0, "dynamic": 0, "definitions": set(),
-              "dynamic_roots": [], "faces": 0}
+              "dynamic_roots": [], "faces": 0, "lights": 0,
+              "scenes": scenes_added}
 
     def mesh_for(defn, inherited, painted_by_formula=False):
         key = (id(defn), inherited, painted_by_formula)
@@ -321,6 +366,10 @@ def build(scene, model, path) -> dict:
             }}
             if top:
                 report["dynamic_roots"].append(group.name)
+        lights = enscape_lights.lights_of(defn, inst)
+        if lights:
+            group.ext = enscape_lights.with_lights(group.ext, lights)
+            report["lights"] += len(lights)
         kids = [place(c, None, depth + 1, False)
                 for c in getattr(defn, "instances", []) or []]
         group.adopt([k for k in kids if k is not None])
