@@ -1,0 +1,80 @@
+
+<a name="files"></a>
+<h3>Archivos .skp: cómo funciona</h3>
+<p>Esta extensión abre archivos <b>.skp</b> <i>conservando sus componentes</i> (y los datos de componente dinámico que
+llevan), y guarda tu dibujo como <b>.skp</b> de nuevo. Para <i>editar</i> componentes dinámicos (opciones, atributos,
+fórmulas) usa la extensión independiente <b>Componentes dinámicos</b>; las dos leen y escriben los mismos datos, así que
+puedes importar un .skp, editarlo allí y volver a exportarlo.</p>
+
+<a name="import"></a>
+<h4>Importar .skp conservando los componentes…</h4>
+<ol>
+<li>Elige <b>Extensiones ▸ Importar .skp conservando los componentes…</b> (o el botón de importar de la barra de herramientas).</li>
+<li>Escoge el archivo .skp. El cursor indica que está trabajando; los archivos grandes tardan un momento.</li>
+<li>Un resumen dice cuántos componentes y grupos han entrado, cuántos tienen atributos dinámicos, y enumera los
+componentes dinámicos.</li>
+</ol>
+<p>Lo que obtienes:</p>
+<ul>
+<li>Cada grupo y componente es un <b>componente anidado</b> de IngeTrazo, tan hondo como el archivo los anide. Las piezas
+repetidas <b>comparten</b> su geometría (una definición, muchas colocaciones).</li>
+<li>Cada pieza que es un componente dinámico conserva sus atributos dinámicos, fórmulas y opciones, exactamente como
+los guarda el archivo.</li>
+<li>Un <b>componente dinámico guardado como archivo propio</b> (un componente de biblioteca, guardado por separado desde el programa
+en que se hizo) entra como <b>un solo componente</b> que contiene sus piezas, tal como lo inserta ese programa, con los
+atributos, fórmulas y opciones de nivel superior a los que se refieren las piezas (<i>Nombre!Atributo</i>). Archivos de
+todas las versiones de .skp, incluidos los de 2020 y anteriores.</li>
+<li>Caras, materiales, texturas, aristas suavizadas y aristas sueltas entran igual que con la importación .skp de IngeTrazo.</li>
+<li>Toda la importación es <b>un solo paso de deshacer</b>.</li>
+</ul>
+<p>La importación .skp de IngeTrazo aplana cada objeto de nivel superior en un único grupo, lo que va bien para geometría
+de referencia pero pierde las piezas de que se compone un componente; esta las conserva. Si no se puede leer un archivo,
+un mensaje indica su nombre y el motivo, y el dibujo queda como estaba.</p>
+
+<a name="export"></a>
+<h4>Exportar .skp con componentes dinámicos…</h4>
+<ol>
+<li>Comprueba que el <b>archivo en blanco</b> está listo (véase más abajo). Si no, la exportación abre primero la ventana de ajustes.</li>
+<li>Elige <b>Extensiones ▸ Exportar .skp con componentes dinámicos…</b> (o el botón de exportar de la barra de herramientas).</li>
+<li>Elige el nombre y el lugar; la extensión <i>.skp</i> se añade si la omites.</li>
+</ol>
+<p>Lo que se escribe:</p>
+<ul>
+<li>Un archivo en formato <b>.skp 2017</b>, que abren todas las versiones posteriores.</li>
+<li>Grupos y componentes: un componente usado varias veces se guarda una vez y se coloca varias veces.</li>
+<li>Materiales, con sus texturas incrustadas; capas como etiquetas; caras con agujeros.</li>
+<li>Para cada pieza, los datos de su <b>componente dinámico</b>, de modo que los componentes siguen funcionando como
+componentes dinámicos, con sus opciones. Las piezas que un componente dinámico oculta se escriben ocultas, no se omiten.</li>
+</ul>
+
+<a name="template"></a>
+<h4>El archivo en blanco (hace falta para exportar)</h4>
+<p>Para escribir un .skp, OpenSKP parte de un documento .skp vacío, <code>{FILE_NAME}</code> (unos 5,8 KB,
+hecho con el SDK del propio formato). Esta extensión <b>no</b> lo incluye, para que solo se distribuyan piezas libres. Solo hay
+que conseguirlo una vez; <b>importar funciona sin él</b>. Abre <b>Extensiones ▸ Ajustes del .skp…</b>:</p>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>✔ / ✖ / ⚠</b></td><td>El estado: listo, falta, o un archivo que no es el correcto.</td></tr>
+<tr><td valign='top'><b>Descargar de OpenSKP</b></td><td>Obtiene el archivo del proyecto OpenSKP en una versión fija y lo comprueba
+con su SHA-256 antes de conservarlo. Si la descarga falla, el mensaje da la dirección para que lo consigas
+tú mismo.</td></tr>
+<tr><td valign='top'><b>Elegir archivo…</b></td><td>Usa una copia que ya tengas. Debe ser <b>exactamente</b> ese archivo:
+el escritor depende de sus bytes, así que cualquier otro .skp en blanco, incluso uno vacío guardado desde un modelador, se rechaza.</td></tr>
+</table>
+<p>El archivo se guarda en la carpeta de esta extensión, dentro de tu directorio de datos de usuario. Una versión de la extensión que ya
+lleve el archivo muestra «Incluido en esta versión» y no necesita nada más.</p>
+
+<a name="problems"></a>
+<h4>Si algo va mal</h4>
+<ul>
+<li><b>«No se pudo importar …»</b>: no se pudo leer el archivo; a continuación se indica el motivo. Prueba a abrirlo en el programa
+de donde viene y a guardarlo de nuevo.</li>
+<li><b>«No hay ningún .skp en blanco en …»</b>: la exportación necesita el archivo en blanco: usa <b>Descargar de OpenSKP</b> o <b>Elegir archivo…</b>.</li>
+<li><b>«no es el archivo esperado»</b>: el archivo elegido no es el original; usa la descarga.</li>
+<li><b>La descarga falla</b>: quizá no tienes conexión o hay un cortafuegos; descarga el archivo desde la dirección indicada y usa
+<b>Elegir archivo…</b>.</li>
+<li><b>Los componentes dinámicos no responden tras importar</b>: instala la extensión <b>Componentes dinámicos</b> (aporta
+Opciones del componente y Atributos del componente).</li>
+</ul>
+<p><small>Créditos: el intérprete de fórmulas es <i>Dynamic Components for IngeTrazo</i> de d1rty-pixel (GPL-3.0); el escritor de
+.skp viene de <code>formats/skp_out.py</code> de IngeTrazo; OpenSKP es © Ahsan Mehmood (MIT). Esta extensión es
+GPL-3.0-or-later.</small></p>

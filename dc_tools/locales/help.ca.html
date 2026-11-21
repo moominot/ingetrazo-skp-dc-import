@@ -1,0 +1,105 @@
+
+<a name="options"></a>
+<h3>Opcions del component: com funciona</h3>
+<p>Un <b>component dinàmic</b> mostra als seus usuaris unes quantes <b>opcions</b>: el nombre de prestatges, l'amplada, un tipus
+de porta… Aquest tauler és on les canvien. En aplicar, el component es <b>redibuixa</b> segons les regles dels components
+dinàmics: les còpies, les peces amagades, les mides, les posicions, els girs i els materials es tornen a calcular a partir de les
+opcions i de les fórmules. Les opcions les defineix l'autor del component: un component importat d'un fitxer .skp porta les seves, i
+un de fet aquí les rep a <i>Atributs del component ▸ Opcions…</i>.</p>
+
+<h4>Com s'utilitza</h4>
+<ol>
+<li><b>Selecciona</b> un component dinàmic al dibuix. El tauler segueix la selecció; el títol mostra el nom del
+component i quantes opcions té. (Si el títol et demana que en seleccionis un, la selecció no és un component
+dinàmic.)</li>
+<li><b>Canvia</b> les opcions que vulguis (vegeu més avall).</li>
+<li>Prem <b>Aplica</b> (o Retorn en un quadre de text). El component es redibuixa, com a <b>un sol pas de desfer</b>.</li>
+</ol>
+
+<h4>El tauler</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>Quadre de text</b></td><td>Una opció que escrius: un nombre (en les unitats pròpies de l'opció, com cm) o
+un text. Un valor que no és un nombre s'avisa i no s'aplica res.</td></tr>
+<tr><td valign='top'><b>Llista</b></td><td>Una opció que tries d'una llista desplegable. Una opció pot portar una fórmula, que
+es calcula en aplicar.</td></tr>
+<tr><td valign='top'><b>Valor de només lectura</b></td><td>Una opció que l'autor deixa veure però no canviar (un preu
+o una mida calculats, per exemple). Es mostra com a text.</td></tr>
+<tr><td valign='top'><b>Aplica</b></td><td>Redibuixa el component amb les opcions que has canviat (només s'envien aquestes).
+Un sol pas de desfer.</td></tr>
+<tr><td valign='top'><b>Reverteix</b></td><td>Torna els valors que té ara el component, descartant el que has escrit.</td></tr>
+<tr><td valign='top'><b>Línia de missatges</b></td><td>Sota els botons. <i>Redibuixat</i> quan ha anat bé. Si alguna fórmula no s'ha pogut
+avaluar, ho diu: aquests atributs conserven el valor.</td></tr>
+</table>
+<p><b>Mides.</b> Si una opció és LenX, LenY o LenZ, canviar-la redimensiona el component tal com es redimensiona un component dinàmic:
+la peça s'estira i el que conté la segueix, i després les fórmules de les seves subpeces fixen el que controlen.</p>
+<p>Obre el tauler des d'<b>Extensions ▸ Opcions del component dinàmic…</b>, des de la barra d'eines o des del menú contextual
+d'un component dinàmic.</p>
+
+<a name="attributes"></a>
+<h3>Atributs del component: com funciona</h3>
+<p>Un <b>component dinàmic</b> és un component la mida, la posició, les còpies, la visibilitat o el material del qual es
+<i>calculen</i> a partir d'atributs i fórmules, igual que els components dinàmics dels fitxers .skp. Aquest tauler és on
+crees i edites aquests atributs. Les dades es desen a la manera pròpia del format .skp, de manera que un component fet aquí continua funcionant
+quan s'exporta a .skp (amb l'extensió de fitxers .skp).</p>
+
+<h4>En cinc passos</h4>
+<ol>
+<li><b>Selecciona</b> un component o un grup al dibuix (el tauler segueix la selecció).</li>
+<li>Tria les <b>unitats</b> en què s'escriuen les seves fórmules i prem <b>Fes dinàmic</b>.</li>
+<li>A l'arbre, tria la <b>peça</b> (el component o una de les seves subpeces) que vols editar.</li>
+<li><b>Afegeix un atribut</b>: tria'n un de predefinit (X, LenX, Copies…) o <i>Personalitzat…</i> per al teu (primer una lletra,
+després lletres, dígits o _).</li>
+<li>Escriu un <b>valor</b> a la columna <i>Valor o =fórmula</i>, o una fórmula que comenci per <b>=</b>. La columna
+<i>Resultat</i> mostra què dona ara mateix. El dibuix es redibuixa quan prems Retorn.</li>
+</ol>
+<p>Cada canvi és un pas de desfer.</p>
+
+<h4>El tauler</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>Títol</b></td><td>El component que s'està editant.</td></tr>
+<tr><td valign='top'><b>Fes dinàmic</b> + unitats</td><td>Dona atributs dinàmics al component o grup seleccionat. Les unitats
+(centímetres, mil·límetres, metres, polzades, peus) són les que les seves <b>fórmules</b> usen per a les longituds: una fórmula
+<code>=4</code> en un component en centímetres són 4 cm.</td></tr>
+<tr><td valign='top'><b>Arbre</b></td><td>El component i les seves subpeces. Cada peça té els seus propis atributs.</td></tr>
+<tr><td valign='top'><b>Taula</b></td><td><i>Atribut</i>: el seu nom (en <b>negreta</b> si els usuaris el veuen a Opcions del
+component). <i>Valor o =fórmula</i>: un valor fix o una fórmula. <i>Resultat</i>: el valor calculat; <b>?</b> vol dir que
+la fórmula té un error, i aleshores l'atribut conserva el valor anterior.</td></tr>
+<tr><td valign='top'><b>Afegeix un atribut</b></td><td>Afegeix un atribut predefinit (vegeu més avall) o un de personalitzat.</td></tr>
+<tr><td valign='top'><b>Elimina</b></td><td>Treu de la peça l'atribut seleccionat.</td></tr>
+<tr><td valign='top'><b>Opcions…</b></td><td>Com es mostra l'atribut a les persones que usen el component, a
+Opcions del component: <i>Etiqueta mostrada</i> (el text que veuen); <i>Accés</i> (no visible, només lectura, un quadre de text o una
+llista); <i>Mostra en</i> (unitats); i, per a una llista, les seves <i>Opcions de la llista</i>: parells d'etiqueta i valor (el valor
+pot ser una fórmula, <code>=alguna cosa</code>). Això és el que fa d'un atribut una <b>opció</b> que l'usuari pot canviar.</td></tr>
+</table>
+
+<h4>Atributs predefinits</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>{PREDEFINED}</table>
+
+<h4>Escriure fórmules</h4>
+<p>Una fórmula comença per <b>=</b>. Sense això, el que escrius és un valor fix.</p>
+<ul>
+<li><b>Altres atributs.</b> Un nom sol és un atribut de la <b>mateixa peça</b>: <code>=lenx/2</code>.
+<code>Nom!atr</code> és l'atribut d'una altra peça: <code>=parent!lenx-3.6</code>,
+<code>=Shelf!z+2</code>. <code>parent</code> és la peça que conté aquesta; <code>self</code> és aquesta peça.
+Els altres noms es busquen entre la mateixa peça, els seus avantpassats, els seus germans i els seus fills, i res més enllà.</li>
+<li><b>Operadors.</b> <code>+ − * / ^</code> (potència) · <code>&amp;</code> uneix text · comparacions
+<code>= &lt;&gt; &lt; &gt; &lt;= &gt;=</code> (donen cert o fals) · parèntesis.</li>
+<li><b>Valors.</b> Nombres (<code>3.5</code>), text entre cometes (<code>"roure"</code>), <code>TRUE</code> i <code>FALSE</code>.</li>
+<li><b>Unitats.</b> Una fórmula veu les longituds en les unitats del <i>seu</i> component, i el resultat es converteix de nou.
+Els angles són en graus.</li>
+<li><b>Cert i fals.</b> Només TRUE o un nombre <b>positiu</b> és cert. <code>IF(0, a, b)</code> i
+<code>IF(-1, a, b)</code> donen b.</li>
+<li><b>Errors.</b> Si una fórmula falla (nom desconegut, divisió per zero, un argument fora de rang…) l'atribut conserva
+el valor anterior i el <i>Resultat</i> mostra <b>?</b>.</li>
+</ul>
+
+<h4>Exemple: un armari amb N prestatges</h4>
+<p>A l'armari: atribut <code>n</code> = 3, definit com a opció perquè els usuaris el puguin canviar (Opcions… ▸ Accés: quadre de text).
+A la peça <i>Shelf</i>: <code>Copies</code> = <code>=parent!n-1</code>, <code>LenX</code> =
+<code>=parent!lenx-3.6</code> i <code>Z</code> = <code>=(copy+1)*parent!lenz/parent!n</code>.
+Canviar <i>n</i> a Opcions del component redibuixa l'armari amb tants prestatges, repartits uniformement.</p>
+
+<h4>Funcions</h4>
+{FUNCTIONS}
+<p><small>Els noms no distingeixen majúscules de minúscules. No s'admeten: OnClick i animacions, ni les funcions que llegeixen la
+geometria (com l'àrea d'una cara).</small></p>

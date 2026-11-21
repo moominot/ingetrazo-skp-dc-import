@@ -1,37 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The extension's toolbar: one button per command, with generated icons
-(no image files to ship)."""
+"""The extension's toolbar: one button per command, with icons drawn in
+IngeTrazo's own style (icons.py: thin ink lines, accent fills, theme-aware)."""
 from __future__ import annotations
 
-from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QToolBar
 
+from .icons import icon
+from .i18n import tr
+
 OBJECT_NAME = "asset_manager_toolbar"   # stable: the saved layout keys on it
-
-# (glyph, kind): kind picks the badge colour so the buttons read as groups.
-_FILE, _EDIT, _CFG = "#2f6fb0", "#3f8f4f", "#777777"
-
-
-def make_icon(glyph: str, color: str, size: int = 32) -> QIcon:
-    """A rounded square with a short glyph, drawn at 2x for sharp edges."""
-    px = QPixmap(size * 2, size * 2)
-    px.fill(Qt.transparent)
-    p = QPainter(px)
-    p.setRenderHint(QPainter.Antialiasing)
-    p.setBrush(QColor(color))
-    p.setPen(Qt.NoPen)
-    r = QRectF(3, 3, size * 2 - 6, size * 2 - 6)
-    p.drawRoundedRect(r, 12, 12)
-    p.setPen(QPen(QColor("white")))
-    f = QFont()
-    f.setBold(True)
-    f.setPixelSize(int(size * (1.0 if len(glyph) == 1 else 0.78)))
-    p.setFont(f)
-    p.drawText(r, Qt.AlignCenter, glyph)
-    p.end()
-    return QIcon(px)
-
 
 def build(app, actions: dict) -> QToolBar | None:
     """Create the toolbar from ``actions`` {key: QAction or None} and place
@@ -39,17 +16,17 @@ def build(app, actions: dict) -> QToolBar | None:
     window = getattr(app, "window", None)
     if window is None or not hasattr(window, "addToolBar"):
         return None
-    spec = (("open", "Co", _FILE, "Components manager"),
-            ("polyhaven", "On", _EDIT, "Online assets: HDRIs, materials and models"))
-    bar = QToolBar("Components", window)
+    spec = (("open", "comp_manager", "Components manager"),
+            ("polyhaven", "comp_online", "Online assets: HDRIs, materials and models"))
+    bar = QToolBar(tr("Components"), window)
     bar.setObjectName(OBJECT_NAME)
     sep_after = set()
-    for key, glyph, color, tip in spec:
+    for key, icon_key, tip in spec:
         act = actions.get(key)
         if act is None:
             continue
-        act.setIcon(make_icon(glyph, color))
-        act.setToolTip(tip)
+        act.setIcon(icon(icon_key))
+        act.setToolTip(tr(tip))
         bar.addAction(act)
         if key in sep_after:
             bar.addSeparator()

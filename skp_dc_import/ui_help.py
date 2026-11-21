@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QDialog, QLineEdit, QTextBrowser, QVBoxLayout
 
 from . import help_text
+from .i18n import tr
 
 _dialog = None
 
@@ -12,11 +13,11 @@ _dialog = None
 class HelpDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(".skp files: help")
+        self.setWindowTitle(tr(".skp files: help"))
         self.resize(560, 620)
         lay = QVBoxLayout(self)
         self.find = QLineEdit()
-        self.find.setPlaceholderText("Search the help (e.g. import, export, blank file)")
+        self.find.setPlaceholderText(tr("Search the help (e.g. import, export, blank file)"))
         self.find.setClearButtonEnabled(True)
         self.find.returnPressed.connect(self._find_next)
         self.find.textChanged.connect(lambda _t: self._find_next(restart=True))

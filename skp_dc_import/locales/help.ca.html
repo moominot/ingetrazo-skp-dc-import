@@ -1,0 +1,80 @@
+
+<a name="files"></a>
+<h3>Fitxers .skp: com funciona</h3>
+<p>Aquesta extensió obre fitxers <b>.skp</b> <i>mantenint-ne els components</i> (i les dades de component dinàmic que
+porten), i torna a desar el teu dibuix com a <b>.skp</b>. Per <i>editar</i> components dinàmics (opcions, atributs,
+fórmules) usa l'extensió independent <b>Components dinàmics</b>; totes dues llegeixen i escriuen les mateixes dades, de
+manera que pots importar un .skp, editar-lo allà i tornar-lo a exportar.</p>
+
+<a name="import"></a>
+<h4>Importa .skp mantenint els components…</h4>
+<ol>
+<li>Tria <b>Extensions ▸ Importa .skp mantenint els components…</b> (o el botó d'importació de la barra d'eines).</li>
+<li>Escull el fitxer .skp. El cursor indica que està treballant; els fitxers grans triguen una estona.</li>
+<li>Un resum indica quants components i grups han entrat, quants tenen atributs dinàmics, i en llista els
+components dinàmics.</li>
+</ol>
+<p>El que obtens:</p>
+<ul>
+<li>Cada grup i component és un <b>component niuat</b> d'IngeTrazo, tan endins com el fitxer els niua. Les peces
+repetides <b>comparteixen</b> la geometria (una definició, moltes col·locacions).</li>
+<li>Cada peça que és un component dinàmic conserva els seus atributs dinàmics, fórmules i opcions, exactament com
+els desa el fitxer.</li>
+<li>Un <b>component dinàmic desat com a fitxer propi</b> (un component de biblioteca, desat per separat des del programa
+on es va fer) entra com <b>un sol component</b> que conté les seves peces, tal com l'insereix aquell programa, amb els
+atributs, fórmules i opcions de nivell superior als quals es refereixen les peces (<i>Nom!Atribut</i>). Fitxers de
+totes les versions de .skp, inclosos els del 2020 i anteriors.</li>
+<li>Cares, materials, textures, arestes suavitzades i arestes soltes entren igual que amb la importació .skp d'IngeTrazo.</li>
+<li>Tota la importació és <b>un sol pas de desfer</b>.</li>
+</ul>
+<p>La importació .skp d'IngeTrazo aplana cada objecte de nivell superior en un únic grup, cosa que va bé per a geometria
+de referència però perd les peces de què es compon un component; aquesta les conserva. Si no es pot llegir un fitxer,
+un missatge en diu el nom i el motiu, i el dibuix queda com estava.</p>
+
+<a name="export"></a>
+<h4>Exporta .skp amb components dinàmics…</h4>
+<ol>
+<li>Comprova que el <b>fitxer en blanc</b> estigui a punt (vegeu més avall). Si no, l'exportació obre primer la finestra d'ajustos.</li>
+<li>Tria <b>Extensions ▸ Exporta .skp amb components dinàmics…</b> (o el botó d'exportació de la barra d'eines).</li>
+<li>Tria el nom i el lloc; l'extensió <i>.skp</i> s'afegeix si l'ometes.</li>
+</ol>
+<p>El que s'escriu:</p>
+<ul>
+<li>Un fitxer en format <b>.skp 2017</b>, que obren totes les versions posteriors.</li>
+<li>Grups i components: un component usat diverses vegades es desa una vegada i es col·loca diverses vegades.</li>
+<li>Materials, amb les textures incrustades; capes com a etiquetes; cares amb forats.</li>
+<li>Per a cada peça, les dades del seu <b>component dinàmic</b>, de manera que els components continuen funcionant com a
+components dinàmics, amb les seves opcions. Les peces que un component dinàmic amaga s'escriuen amagades, no s'ometen.</li>
+</ul>
+
+<a name="template"></a>
+<h4>El fitxer en blanc (cal per exportar)</h4>
+<p>Per escriure un .skp, OpenSKP parteix d'un document .skp buit, <code>{FILE_NAME}</code> (uns 5,8 KB,
+fet amb l'SDK del mateix format). Aquesta extensió <b>no</b> l'inclou, perquè només es distribueixin peces lliures. Només
+l'has d'aconseguir una vegada; <b>importar funciona sense ell</b>. Obre <b>Extensions ▸ Ajustos del .skp…</b>:</p>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>✔ / ✖ / ⚠</b></td><td>L'estat: llest, que falta, o un fitxer que no és el correcte.</td></tr>
+<tr><td valign='top'><b>Baixa d'OpenSKP</b></td><td>Obté el fitxer del projecte OpenSKP en una versió fixa i el comprova
+amb el seu SHA-256 abans de conservar-lo. Si la baixada falla, el missatge dona l'adreça perquè el puguis obtenir
+tu mateix.</td></tr>
+<tr><td valign='top'><b>Tria un fitxer…</b></td><td>Usa una còpia que ja tinguis. Ha de ser <b>exactament</b> aquest fitxer:
+l'escriptor depèn dels seus bytes, de manera que qualsevol altre .skp en blanc, fins i tot un de buit desat des d'un modelador, es rebutja.</td></tr>
+</table>
+<p>El fitxer es guarda a la carpeta d'aquesta extensió, dins del teu directori de dades d'usuari. Una versió de l'extensió que ja
+porti el fitxer mostra «Inclòs amb aquesta versió» i no necessita res més.</p>
+
+<a name="problems"></a>
+<h4>Si alguna cosa va malament</h4>
+<ul>
+<li><b>«No s'ha pogut importar …»</b>: no s'ha pogut llegir el fitxer; a continuació s'indica el motiu. Prova d'obrir-lo al programa
+d'on ve i tornar-lo a desar.</li>
+<li><b>«No hi ha cap .skp en blanc a …»</b>: l'exportació necessita el fitxer en blanc: usa <b>Baixa d'OpenSKP</b> o <b>Tria un fitxer…</b>.</li>
+<li><b>«no és el fitxer esperat»</b>: el fitxer triat no és l'original; usa la baixada.</li>
+<li><b>La baixada falla</b>: potser no tens connexió o hi ha un tallafoc; baixa el fitxer des de l'adreça indicada i usa
+<b>Tria un fitxer…</b>.</li>
+<li><b>Els components dinàmics no responen després d'importar</b>: instal·la l'extensió <b>Components dinàmics</b> (aporta
+Opcions del component i Atributs del component).</li>
+</ul>
+<p><small>Crèdits: l'intèrpret de fórmules és <i>Dynamic Components for IngeTrazo</i> de d1rty-pixel (GPL-3.0); l'escriptor de
+.skp ve de <code>formats/skp_out.py</code> d'IngeTrazo; OpenSKP és © Ahsan Mehmood (MIT). Aquesta extensió és
+GPL-3.0-or-later.</small></p>

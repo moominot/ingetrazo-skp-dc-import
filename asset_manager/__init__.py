@@ -25,9 +25,12 @@ def setup(app):
     from PySide6.QtCore import QTimer
 
     from . import inventory
+    from .i18n import tr
+    from .icons import panel_icon
     from .panel import AssetPanel
     panel = AssetPanel(app)
-    dock = app.add_panel("Components", panel, name="components")
+    dock = app.add_panel(tr("Components"), panel, name="components",
+                          **panel_icon(app, "comp_manager"))
 
     def show(tab=None):
         app.show_panel(dock)
@@ -36,21 +39,21 @@ def setup(app):
 
     acts = {
         "open": app.add_menu_action(
-            "Components manager…", show,
-            tip="The components in the drawing, your catalog folders and free online assets."),
+            tr("Components manager…"), show,
+            tip=tr("The components in the drawing, your catalog folders and free online assets.")),
         "polyhaven": app.add_menu_action(
-            "Online assets: HDRIs, materials and models…", lambda: show(2),
-            tip="Free CC0 360° backgrounds, materials and 3-D models from Poly Haven and ambientCG."),
+            tr("Online assets: HDRIs, materials and models…"), lambda: show(2),
+            tip=tr("Free CC0 360° backgrounds, materials and 3-D models from Poly Haven and ambientCG.")),
         "settings": app.add_menu_action(
-            "Components manager settings…", panel.open_settings,
-            tip="Model sites to open, and which catalog folders are watched in real time."),
+            tr("Components manager settings…"), panel.open_settings,
+            tip=tr("Model sites to open, and which catalog folders are watched in real time.")),
     }
 
     def context_menu(menu, selection):
         g = inventory.selected_component(selection)
         if g is not None:
             name = inventory.display_name(g)
-            menu.addAction(f"Select all instances of «{name}»",
+            menu.addAction(tr("Select all instances of «{name}»", name=name),
                            lambda: QTimer.singleShot(0, lambda: panel.select_like(g)))
         try:
             proxy_menu(menu, selection)
@@ -69,13 +72,13 @@ def setup(app):
             return f" ({len(groups)})" if len(groups) > 1 else ""
 
         if can["make"]:
-            menu.addAction("Make proxy" + n(can["make"]), later("make", can["make"]))
+            menu.addAction(tr("Make proxy") + n(can["make"]), later("make", can["make"]))
         if can["original"]:
-            menu.addAction("Show original" + n(can["original"]), later("original", can["original"]))
+            menu.addAction(tr("Show original") + n(can["original"]), later("original", can["original"]))
         if can["proxy"]:
-            menu.addAction("Show proxy" + n(can["proxy"]), later("proxy", can["proxy"]))
+            menu.addAction(tr("Show proxy") + n(can["proxy"]), later("proxy", can["proxy"]))
         if can["open"]:
-            menu.addAction("Open original in a new tab" + n(can["open"]), later("open", can["open"]))
+            menu.addAction(tr("Open original in a new tab") + n(can["open"]), later("open", can["open"]))
 
     def run(what, groups):
         from PySide6.QtCore import Qt
@@ -89,29 +92,29 @@ def setup(app):
             if what == "make":
                 n = proxy_ops.make_proxies(vp, groups, confirm=panel.confirm_dynamic_many)
                 if n:
-                    say(f"{n} object(s) made proxies: an envelope in the drawing, the full model "
-                        f"in {proxy_folder(vp)}.", 6000)
+                    say(tr("{n} object(s) made proxies: an envelope in the drawing, the full model "
+                           "in {folder}.", n=n, folder=proxy_folder(vp)), 6000)
             elif what == "open":
                 QApplication.restoreOverrideCursor()        # the tab may ask (recovered copy…)
                 QApplication.setOverrideCursor(Qt.ArrowCursor)
                 opened, missing = proxy_ops.open_originals(app.window, vp, groups)
                 if missing:
-                    say(f"Original not found: {', '.join(missing)}.", 8000)
+                    say(tr("Original not found: {names}.", names=", ".join(missing)), 8000)
                 elif opened:
                     front_say = getattr(app.viewport, "flash_status", None) or say
-                    front_say("Original opened in its own tab. Save it there: the proxy takes the "
-                              "change when you come back to its drawing.", 8000)
+                    front_say(tr("Original opened in its own tab. Save it there: the proxy takes the "
+                                 "change when you come back to its drawing."), 8000)
             elif what == "original":
                 n, missing = proxy_ops.show_originals(vp, groups)
-                say(f"Full model shown: {n}." + (f" Not found: {', '.join(missing)}." if missing else ""),
+                say(tr("Full model shown: {n}.", n=n) + (" " + tr("Not found: {names}.", names=", ".join(missing)) if missing else ""),
                     8000 if missing else 5000)
             else:
                 n, failed = proxy_ops.show_proxies(vp, groups)
-                say(f"Back to the proxy: {n}." + (f" Could not save: {', '.join(failed)}." if failed else ""),
+                say(tr("Back to the proxy: {n}.", n=n) + (" " + tr("Could not save: {names}.", names=", ".join(failed)) if failed else ""),
                     8000 if failed else 5000)
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("proxy command failed")
-            say(f"Proxy: {exc}", 8000)
+            say(tr("Proxy: {error}", error=exc), 8000)
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -147,8 +150,8 @@ def setup(app):
             _log.exception("proxy refresh failed")
             return
         if names and hasattr(vp, "flash_status"):
-            vp.flash_status(f"Proxy updated from its saved original: {', '.join(names[:4])}"
-                            + ("…" if len(names) > 4 else ""), 6000)
+            vp.flash_status(tr("Proxy updated from its saved original: {names}",
+                               names=", ".join(names[:4]) + ("…" if len(names) > 4 else "")), 6000)
 
     if hasattr(app, "on_document_changed"):
         app.on_document_changed(check_originals)

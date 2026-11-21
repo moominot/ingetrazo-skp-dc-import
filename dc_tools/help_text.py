@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from html import escape
 
+from .i18n import localized_text, tr
+
 # (function, syntax, what it does, example)
 FUNCTIONS = (
     ("Logic", (
@@ -82,18 +84,21 @@ PREDEFINED = (
 def _functions_html() -> str:
     out = []
     for group, rows in FUNCTIONS:
-        out.append(f"<h4>{escape(group)}</h4><table cellspacing='0' cellpadding='3' width='100%'>")
+        out.append(f"<h4>{escape(tr(group))}</h4><table cellspacing='0' cellpadding='3' width='100%'>")
         for _name, syntax, text, example in rows:
             out.append(
                 f"<tr><td valign='top'><code><b>{escape(syntax)}</b></code></td>"
-                f"<td valign='top'>{text}<br><i>e.g.</i> <code>={escape(example)}</code></td></tr>")
+                f"<td valign='top'>{tr(text)}<br><i>{tr('e.g.')}</i> <code>={escape(example)}</code></td></tr>")
         out.append("</table>")
     return "".join(out)
 
 
 def html() -> str:
-    pre = "".join(f"<tr><td valign='top'><b>{escape(n)}</b></td><td valign='top'>{t}</td></tr>"
+    pre = "".join(f"<tr><td valign='top'><b>{escape(n)}</b></td><td valign='top'>{tr(t)}</td></tr>"
                   for n, t in PREDEFINED)
+    translated = localized_text("help")
+    if translated is not None:
+        return translated.replace("{PREDEFINED}", pre).replace("{FUNCTIONS}", _functions_html())
     return f"""
 <a name="options"></a>
 <h3>Component Options: how it works</h3>

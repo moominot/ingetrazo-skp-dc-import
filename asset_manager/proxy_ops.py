@@ -22,6 +22,7 @@ import uuid
 from pathlib import Path
 
 from . import proxy
+from .i18n import tr
 
 _log = logging.getLogger(__name__)
 #: The dynamic-components data: kept with the original, not on the envelope
@@ -126,7 +127,7 @@ def refresh_changed(viewport) -> list:
             ext[proxy.KEY] = dict(info)
             items.append((g, mesh, [], ext))
     if items:
-        _execute(viewport, items, label="Update proxy")
+        _execute(viewport, items, label=tr("Update proxy"))
     return names
 
 
@@ -240,7 +241,7 @@ def make_proxies(viewport, groups, confirm=None) -> int:
             ext[proxy.KEY] = dict(info)
             items.append((g, mesh, [], ext))
     if items:
-        _execute(viewport, items, label="Make proxy")
+        _execute(viewport, items, label=tr("Make proxy"))
     return len(families)
 
 
@@ -294,7 +295,7 @@ def show_originals(viewport, groups) -> tuple[int, list]:
             ext[proxy.KEY] = new
             items.append((s, src.mesh, kids, ext))
     if items:
-        _execute(viewport, items, mats, label="Show original")
+        _execute(viewport, items, mats, label=tr("Show original"))
     return len(done) - len(missing), missing
 
 
@@ -337,5 +338,5 @@ def show_proxies(viewport, groups) -> tuple[int, list]:
             ext[proxy.KEY] = dict(new)
             items.append((s, mesh, [], ext))
     if items:
-        _execute(viewport, items, label="Show proxy")
+        _execute(viewport, items, label=tr("Show proxy"))
     return len(done) - len(failed), failed

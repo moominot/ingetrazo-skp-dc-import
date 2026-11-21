@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QFileDialog, QFormLayo
                                QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout)
 
 from . import catalog
+from .i18n import tr, translate_on_show
 
 WATCH_QUESTION = ("Watch this folder in real time?\n\n"
                   "Yes: a model saved or downloaded into it shows in the catalog at once "
@@ -23,7 +24,7 @@ WATCH_QUESTION = ("Watch this folder in real time?\n\n"
 
 def ask_watch(parent, folder) -> bool:
     return QMessageBox.question(
-        parent, "Catalog folder", f"{folder}\n\n{WATCH_QUESTION}",
+        parent, tr("Catalog folder"), f"{folder}\n\n{tr(WATCH_QUESTION)}",
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.Yes
 
 
@@ -35,12 +36,12 @@ def downloads_folder() -> str:
 def choose_and_add_folder(parent):
     """Ask for a folder and whether to watch it; add it. Returns the folder
     added, or None."""
-    path = QFileDialog.getExistingDirectory(parent, "Folder with your models (.igz, .skp)",
+    path = QFileDialog.getExistingDirectory(parent, tr("Folder with your models (.igz, .skp)"),
                                             downloads_folder())
     if not path:
         return None
     if not catalog.add_folder(path):
-        QMessageBox.information(parent, "Catalog folder", "That folder is already in the catalog.")
+        QMessageBox.information(parent, tr("Catalog folder"), tr("That folder is already in the catalog."))
         return None
     catalog.set_watched(path, ask_watch(parent, path))
     return Path(path)
@@ -49,19 +50,20 @@ def choose_and_add_folder(parent):
 class SiteDialog(QDialog):
     def __init__(self, parent=None, name="", url=""):
         super().__init__(parent)
-        self.setWindowTitle("Model site")
+        self.setWindowTitle(tr("Model site"))
         self.setMinimumWidth(420)
         form = QFormLayout(self)
         self.url = QLineEdit(url)
         self.url.setPlaceholderText("https://…")
         self.name = QLineEdit(name)
-        self.name.setPlaceholderText("(the site's address if left empty)")
+        self.name.setPlaceholderText(tr("(the site's address if left empty)"))
         form.addRow("Address", self.url)
         form.addRow("Name", self.name)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._ok)
         buttons.rejected.connect(self.reject)
         form.addRow(buttons)
+        translate_on_show(self)
 
     def _ok(self):
         url = self.url.text().strip()
@@ -69,7 +71,7 @@ class SiteDialog(QDialog):
             url = "https://" + url
             self.url.setText(url)
         if not catalog.valid_url(url):
-            QMessageBox.warning(self, self.windowTitle(), "Write a web address (https://…).")
+            QMessageBox.warning(self, self.windowTitle(), tr("Write a web address (https://…)."))
             return
         self.accept()
 
@@ -81,7 +83,7 @@ class SiteDialog(QDialog):
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Components manager settings")
+        self.setWindowTitle(tr("Components manager settings"))
         self.setMinimumWidth(520)
         lay = QVBoxLayout(self)
 
@@ -128,6 +130,7 @@ class SettingsDialog(QDialog):
         lay.addWidget(close)
         self.changed = False
         self._fill()
+        translate_on_show(self)
 
     # -- sites --
     def _fill(self):
@@ -140,7 +143,7 @@ class SettingsDialog(QDialog):
         self.folders.clear()
         watched = catalog.watched()
         for i, f in enumerate(catalog.folders()):
-            it = QListWidgetItem(("Extension's own folder — " if i == 0 else "") + str(f))
+            it = QListWidgetItem((tr("Extension's own folder — ") if i == 0 else "") + str(f))
             it.setData(Qt.UserRole, str(f))
             it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
             it.setCheckState(Qt.Checked if any(f == w for w in watched) else Qt.Unchecked)
@@ -197,7 +200,7 @@ class SettingsDialog(QDialog):
             return
         if not catalog.remove_folder(it.data(Qt.UserRole)):
             QMessageBox.information(self, self.windowTitle(),
-                                    "The extension's own folder stays in the catalog.")
+                                    tr("The extension's own folder stays in the catalog."))
             return
         self.changed = True
         self._fill()

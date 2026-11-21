@@ -17,9 +17,10 @@ import logging
 from pathlib import Path
 
 from .builder import KEY  # noqa: F401 - the data key shared with dc_tools
+from .i18n import tr
 
 _log = logging.getLogger(__name__)
-_TITLE = "Import .skp keeping components"
+_TITLE = tr("Import .skp keeping components")
 
 
 def import_file(viewport, path) -> dict:
@@ -42,14 +43,14 @@ def import_file(viewport, path) -> dict:
 
 def _summary(report: dict) -> str:
     roots = report.get("dynamic_roots") or []
-    text = (f"{report.get('placements', 0)} components and groups, "
-            f"{report.get('dynamic', 0)} of them with dynamic attributes.")
+    text = tr("{n} components and groups, {d} of them with dynamic attributes.",
+              n=report.get("placements", 0), d=report.get("dynamic", 0))
     if report.get("scenes"):
-        text += f"\n{report['scenes']} scenes, as saved views."
+        text += "\n" + tr("{n} scenes, as saved views.", n=report["scenes"])
     if report.get("lights"):
-        text += f"\n{report['lights']} Enscape lights, as Render Studio lights."
+        text += "\n" + tr("{n} Enscape lights, as Render Studio lights.", n=report["lights"])
     if roots:
-        text += "\nDynamic components: " + ", ".join(roots[:12])
+        text += "\n" + tr("Dynamic components: ") + ", ".join(roots[:12])
         if len(roots) > 12:
             text += f" … (+{len(roots) - 12})"
     return text
@@ -63,7 +64,7 @@ def setup(app):
         from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
         from PySide6.QtCore import Qt
         path, _ = QFileDialog.getOpenFileName(
-            app.window, _TITLE, "", ".skp files (*.skp)")
+            app.window, _TITLE, "", tr(".skp files (*.skp)"))
         if not path:
             return
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -73,25 +74,26 @@ def setup(app):
             _log.exception("import of %s failed", path)
             QApplication.restoreOverrideCursor()
             QMessageBox.warning(app.window, _TITLE,
-                                f"Could not import {Path(path).name}:\n{exc}")
+                                tr("Could not import {name}:\n{error}",
+                                   name=Path(path).name, error=exc))
             return
         QApplication.restoreOverrideCursor()
         QMessageBox.information(app.window, _TITLE, _summary(report))
 
     acts = {}
     acts["import"] = app.add_menu_action(
-        "Import .skp keeping components…", ask,
-        tip="Import a .skp keeping its components nested, with their "
-            "dynamic attributes and formulas.")
+        tr("Import .skp keeping components…"), ask,
+        tip=tr("Import a .skp keeping its components nested, with their "
+               "dynamic attributes and formulas."))
 
     def export_skp():
         from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
         from PySide6.QtCore import Qt
-        title = "Export .skp with dynamic components"
+        title = tr("Export .skp with dynamic components")
         from .ui_settings import ensure_template
         if not ensure_template(app.window):
             return
-        path, _ = QFileDialog.getSaveFileName(app.window, title, "", ".skp files (*.skp)")
+        path, _ = QFileDialog.getSaveFileName(app.window, title, "", tr(".skp files (*.skp)"))
         if not path:
             return
         if not path.lower().endswith(".skp"):
@@ -103,31 +105,32 @@ def setup(app):
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("export to %s failed", path)
             QApplication.restoreOverrideCursor()
-            QMessageBox.warning(app.window, title, f"Could not export:\n{exc}")
+            QMessageBox.warning(app.window, title, tr("Could not export:\n{error}", error=exc))
             return
         QApplication.restoreOverrideCursor()
-        app.viewport.flash_status(f"Exported {Path(path).name} (.skp 2017 format).", 5000)
+        app.viewport.flash_status(
+            tr("Exported {name} (.skp 2017 format).", name=Path(path).name), 5000)
 
     acts["export"] = app.add_menu_action(
-        "Export .skp with dynamic components…", export_skp,
-        tip="Write the document as a .skp (2017 format) with groups, "
-            "components and their dynamic attributes.")
+        tr("Export .skp with dynamic components…"), export_skp,
+        tip=tr("Write the document as a .skp (2017 format) with groups, "
+               "components and their dynamic attributes."))
 
     def settings():
         from .ui_settings import SettingsDialog
         SettingsDialog(app.window).exec()
 
     acts["settings"] = app.add_menu_action(
-        ".skp settings…", settings,
-        tip="Credits, and the blank .skp the exporter needs (not bundled).")
+        tr(".skp settings…"), settings,
+        tip=tr("Credits, and the blank .skp the exporter needs (not bundled)."))
 
     def show_help():
         from . import ui_help
         ui_help.show(app.window, "files")
 
     acts["help"] = app.add_menu_action(
-        ".skp files help…", show_help,
-        tip="How importing and exporting .skp files works, and the blank file export needs.")
+        tr(".skp files help…"), show_help,
+        tip=tr("How importing and exporting .skp files works, and the blank file export needs."))
 
     try:
         from . import ui_toolbar

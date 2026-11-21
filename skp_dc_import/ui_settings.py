@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QHBoxLayout,
                                QLabel, QMessageBox, QPushButton, QToolButton, QVBoxLayout)
 
 from . import template
+from .i18n import tr
 
 _log = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ CREDITS = (
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(".skp settings")
+        self.setWindowTitle(tr(".skp settings"))
         self.setMinimumWidth(480)
         lay = QVBoxLayout(self)
         self.state = QLabel()
@@ -41,32 +42,32 @@ class SettingsDialog(QDialog):
         self.state.setTextInteractionFlags(Qt.TextSelectableByMouse)
         lay.addWidget(self.state)
         for html in (WHY, CREDITS):
-            lbl = QLabel(html)
+            lbl = QLabel(tr(html))
             lbl.setWordWrap(True)
             lbl.setTextFormat(Qt.RichText)
             lay.addWidget(lbl)
-        link = QLabel(f'<a href="{template.UPSTREAM_REPO}">OpenSKP project</a> · '
-                      f'file at commit <code>{template.UPSTREAM_COMMIT[:10]}</code> · '
-                      f'SHA-256 <code>{template.SHA256[:16]}…</code>')
+        link = QLabel(tr('<a href="{repo}">OpenSKP project</a> · file at commit <code>{commit}</code> · '
+                      'SHA-256 <code>{sha}…</code>', repo=template.UPSTREAM_REPO,
+                      commit=template.UPSTREAM_COMMIT[:10], sha=template.SHA256[:16]))
         link.setTextFormat(Qt.RichText)
         link.setOpenExternalLinks(True)
         lay.addWidget(link)
         row = QHBoxLayout()
-        self.btn_dl = QPushButton("Download from OpenSKP")
+        self.btn_dl = QPushButton(tr("Download from OpenSKP"))
         self.btn_dl.setToolTip(template.URL)
         self.btn_dl.clicked.connect(self._download)
-        btn_file = QPushButton("Choose file…")
+        btn_file = QPushButton(tr("Choose file…"))
         btn_file.clicked.connect(self._choose)
         row.addWidget(self.btn_dl)
         row.addWidget(btn_file)
         row.addStretch(1)
         help_btn = QToolButton()
         help_btn.setText("?")
-        help_btn.setToolTip("How importing and exporting .skp files works")
+        help_btn.setToolTip(tr("How importing and exporting .skp files works"))
         help_btn.clicked.connect(self._help)
         row.addWidget(help_btn)
         lay.addLayout(row)
-        close = QPushButton("Close")
+        close = QPushButton(tr("Close"))
         close.clicked.connect(self.accept)
         lay.addWidget(close, 0, Qt.AlignRight)
         self.refresh()
@@ -79,8 +80,8 @@ class SettingsDialog(QDialog):
         state, msg = template.status()
         mark, color = {"ok": ("✔", "#2e7d32"), "missing": ("✖", "#c62828"),
                        "bad": ("⚠", "#e65100")}[state]
-        self.state.setText(f'<span style="color:{color}"><b>{mark} Export template:'
-                           f'</b></span> {msg}')
+        self.state.setText(f'<span style="color:{color}"><b>{mark} ' + tr("Export template:")
+                           + f'</b></span> {msg}')
 
     def _download(self):
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -90,16 +91,16 @@ class SettingsDialog(QDialog):
             _log.exception("template download failed")
             QApplication.restoreOverrideCursor()
             QMessageBox.warning(self, self.windowTitle(),
-                                f"Could not get the file:\n{exc}\n\n"
-                                f"You can download it yourself from\n{template.URL}\n"
-                                f"and use «Choose file…».")
+                                tr("Could not get the file:\n{error}\n\n"
+                                   "You can download it yourself from\n{url}\n"
+                                   "and use «Choose file…».", error=exc, url=template.URL))
         else:
             QApplication.restoreOverrideCursor()
         self.refresh()
 
     def _choose(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Blank .skp (blank_v17.skp)", "", ".skp files (*.skp)")
+            self, tr("Blank .skp (blank_v17.skp)"), "", tr(".skp files (*.skp)"))
         if not path:
             return
         try:

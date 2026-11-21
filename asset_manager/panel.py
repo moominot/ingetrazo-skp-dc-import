@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QHBoxLayout, 
                                QWidget)
 
 from . import ambientcg, catalog, inventory, online, place, polyhaven, thumbs
+from .i18n import tr, translate_on_show
 SOURCES = (polyhaven, ambientcg)
 NEW_MARK = "● "
 
@@ -172,6 +173,7 @@ class AssetPanel(QWidget):
         if on_changed is not None:
             on_changed(self._document_changed)
         self.refresh()
+        translate_on_show(self)
         QTimer.singleShot(2000, self._init_watch)
 
     # --- helpers -----------------------------------------------------------------
@@ -186,17 +188,17 @@ class AssetPanel(QWidget):
         note, self._note = self._note, ""
         if group is None:
             if not note:
-                self._say("The model has no geometry.")
+                self._say(tr("The model has no geometry."))
             return
         place.start_place(self._app.window, group, anchor)
-        self._say((note + " " if note else "") + "Click in the view to place it (Esc cancels). "
-                  "You can also drag it from the list onto the view.")
+        self._say((note + " " if note else "") + tr("Click in the view to place it (Esc cancels). "
+                                                    "You can also drag it from the list onto the view."))
 
     # --- as a proxy ------------------------------------------------------------------
     def _proxy_box(self):
         """An «As proxy» check box; every tab's shows the same setting."""
         box = QCheckBox("As proxy")
-        box.setToolTip(PROXY_TIP)
+        box.setToolTip(tr(PROXY_TIP))
         box.setChecked(catalog.as_proxy())
         box.toggled.connect(self._proxy_toggled)
         self._proxy_boxes.append(box)
@@ -214,13 +216,13 @@ class AssetPanel(QWidget):
         """Asked before a model with dynamic components goes in as a proxy."""
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Warning)
-        box.setWindowTitle("Insert as proxy")
-        box.setText(f"«{name}» holds dynamic components.")
+        box.setWindowTitle(tr("Insert as proxy"))
+        box.setText(tr("«{name}» holds dynamic components.", name=name))
         box.setInformativeText(
-            "As a proxy, its options and formulas cannot be changed: the drawing holds only "
-            "its envelope until the original is shown again. Insert it as a proxy anyway?")
-        as_proxy = box.addButton("Insert as proxy", QMessageBox.AcceptRole)
-        normal = box.addButton("Insert the full model", QMessageBox.ActionRole)
+            tr("As a proxy, its options and formulas cannot be changed: the drawing holds only "
+               "its envelope until the original is shown again. Insert it as a proxy anyway?"))
+        as_proxy = box.addButton(tr("Insert as proxy"), QMessageBox.AcceptRole)
+        normal = box.addButton(tr("Insert the full model"), QMessageBox.ActionRole)
         box.addButton(QMessageBox.Cancel)
         box.setDefaultButton(normal)
         QApplication.setOverrideCursor(Qt.ArrowCursor)
@@ -236,13 +238,14 @@ class AssetPanel(QWidget):
         shown = ", ".join(f"«{n}»" for n in names[:4]) + ("…" if len(names) > 4 else "")
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Warning)
-        box.setWindowTitle("Make proxy")
-        box.setText(f"{shown} hold{'s' if len(names) == 1 else ''} dynamic components.")
+        box.setWindowTitle(tr("Make proxy"))
+        box.setText(tr("{names} holds dynamic components.", names=shown) if len(names) == 1
+                    else tr("{names} hold dynamic components.", names=shown))
         box.setInformativeText(
-            "As a proxy, their options and formulas cannot be changed: the drawing holds only "
-            "the envelope until the original is shown again (right-click ▸ Show original). "
-            "Make proxies anyway?")
-        yes = box.addButton("Make proxy", QMessageBox.AcceptRole)
+            tr("As a proxy, their options and formulas cannot be changed: the drawing holds only "
+               "the envelope until the original is shown again (right-click ▸ Show original). "
+               "Make proxies anyway?"))
+        yes = box.addButton(tr("Make proxy"), QMessageBox.AcceptRole)
         box.addButton(QMessageBox.Cancel)
         box.setDefaultButton(QMessageBox.Cancel)
         QApplication.setOverrideCursor(Qt.ArrowCursor)
@@ -262,17 +265,18 @@ class AssetPanel(QWidget):
         g, kind, dynamic = place.proxy_from_file(
             self._vp, path, self._confirm_dynamic if interactive else None)
         if g is None:
-            self._note = "Cancelled." if dynamic else ""
+            self._note = tr("Cancelled.") if dynamic else ""
         elif kind == "normal":
-            self._note = f"«{g.name}» goes in as the full model."
+            self._note = tr("«{name}» goes in as the full model.", name=g.name)
         else:
             from . import proxy
             info = proxy.info_of(g) or {}
             where = Path(info.get("file") or "").parent
-            self._note = (f"«{g.name}» goes in as a proxy (its envelope; the full model, "
-                          f"{info.get('faces', 0):,} faces, is kept in {where}).")
+            self._note = tr("«{name}» goes in as a proxy (its envelope; the full model, "
+                            "{faces} faces, is kept in {where}).",
+                            name=g.name, faces=f"{info.get('faces', 0):,}", where=where)
             if dynamic:
-                self._note += " Its dynamic components cannot be changed while it is a proxy."
+                self._note += " " + tr("Its dynamic components cannot be changed while it is a proxy.")
         if not interactive and self._note:
             self._say(self._note)
             self._note = ""
@@ -338,13 +342,14 @@ class AssetPanel(QWidget):
             label = f"{DYN_MARK if e.dynamic else ''}{e.name}  ×{e.count}"
             it = QListWidgetItem(self._icon_for(e), label)
             it.setData(Qt.UserRole, e)
-            it.setToolTip("Dynamic component" if e.dynamic else "Component")
+            it.setToolTip(tr("Dynamic component") if e.dynamic else tr("Component"))
             self.scene_list.addItem(it)
             if e.key == keep:
                 self.scene_list.setCurrentItem(it)
         n = len(self._entries)
         dyn = sum(e.dynamic for e in self._entries)
-        self.summary.setText(f"{n} component{'' if n == 1 else 's'}, {dyn} dynamic")
+        self.summary.setText(tr("{n} component, {d} dynamic", n=n, d=dyn) if n == 1
+                                 else tr("{n} components, {d} dynamic", n=n, d=dyn))
 
     def _current_entry(self):
         it = self.scene_list.currentItem()
@@ -368,10 +373,11 @@ class AssetPanel(QWidget):
         self._vp.update()
         name = inventory.display_name(group)
         if len(here) < total:
-            self._say(f"Selected {len(here)} of the {total} «{name}»: the others are "
-                      "inside other groups (open one to select its own).")
+            self._say(tr("Selected {n} of the {total} «{name}»: the others are "
+                         "inside other groups (open one to select its own).",
+                         n=len(here), total=total, name=name))
         else:
-            self._say(f"Selected the {total} «{name}».")
+            self._say(tr("Selected the {total} «{name}».", total=total, name=name))
         return here, total
 
     def _drawing_provider(self, it):
@@ -385,7 +391,7 @@ class AssetPanel(QWidget):
     def place_copy(self):
         e = self._current_entry()
         if e is None:
-            self._say("Choose a component in the list first.")
+            self._say(tr("Choose a component in the list first."))
             return
         g = place.copy_of(e.sample)
         self._place(g, place.origin_of(g))
@@ -448,15 +454,15 @@ class AssetPanel(QWidget):
         keep = self.folder_box.currentData()
         self.folder_box.blockSignals(True)
         self.folder_box.clear()
-        self.folder_box.addItem("All folders", "")
+        self.folder_box.addItem(tr("All folders"), "")
         watched = catalog.watched()
         for i, f in enumerate(catalog.folders()):
-            label = "Extension's own folder" if i == 0 else (f.name or str(f))
+            label = tr("Extension's own folder") if i == 0 else (f.name or str(f))
             live = any(f == w for w in watched)
-            self.folder_box.addItem(label + ("  (live)" if live else ""), str(f))
+            self.folder_box.addItem(label + ("  " + tr("(live)") if live else ""), str(f))
             self.folder_box.setItemData(
                 self.folder_box.count() - 1,
-                f"{f}\n" + ("Watched in real time" if live else "Read again with Update"),
+                f"{f}\n" + (tr("Watched in real time") if live else tr("Read again with Update")),
                 Qt.ToolTipRole)
         idx = self.folder_box.findData(keep) if keep is not None else 0
         self.folder_box.setCurrentIndex(max(0, idx))
@@ -513,12 +519,14 @@ class AssetPanel(QWidget):
         self.cat_list.schedule_icons()
         own = catalog.default_folder()
         if not self._cat_items:
-            self.cat_info.setText("No models yet. Add a folder with «+», or put .igz/.skp "
-                                  f"files (and a .png with the same name as preview) in\n{own}")
+            self.cat_info.setText(tr("No models yet. Add a folder with «+», or put .igz/.skp files "
+                                     "(and a .png with the same name as preview) in\n{folder}",
+                                     folder=own))
         else:
             mats = sum(1 for i in self._cat_items if i.maps)
-            self.cat_info.setText(f"{shown} of {len(self._cat_items)} "
-                                  f"({len(self._cat_items) - mats} models, {mats} materials)")
+            self.cat_info.setText(tr("{shown} of {total} ({models} models, {mats} materials)",
+                                     shown=shown, total=len(self._cat_items),
+                                     models=len(self._cat_items) - mats, mats=mats))
 
     @staticmethod
     def _item_tip(item) -> str:
@@ -548,19 +556,19 @@ class AssetPanel(QWidget):
         self.refresh_catalog()
         self.folder_box.setCurrentIndex(max(0, self.folder_box.findData(str(path))))
         live = catalog.is_watched(path)
-        self._say(f"Added {path}" + (" (watched in real time)." if live else
-                                     " (press Update to read it again)."))
+        self._say(tr("Added {path}", path=path) + (" " + tr("(watched in real time).") if live else
+                                                   " " + tr("(press Update to read it again).")))
 
     def remove_folder(self):
         folder = self.folder_box.currentData() or ""
         if not folder:
-            self._say("Show one folder first (not «All folders»).")
+            self._say(tr("Show one folder first (not «All folders»)."))
             return
         if catalog.remove_folder(folder):
             self.refresh_catalog()
-            self._say(f"Taken off the catalog: {folder}")
+            self._say(tr("Taken off the catalog: {folder}", folder=folder))
         else:
-            self._say("The extension's own folder stays in the catalog.")
+            self._say(tr("The extension's own folder stays in the catalog."))
 
     def open_settings(self):
         from . import ui_settings
@@ -585,11 +593,11 @@ class AssetPanel(QWidget):
         QDesktopServices.openUrl(QUrl(url))
         live = [str(w) for w in catalog.watched()]
         if live:
-            self._say("Opened in your browser. Models downloaded into a watched folder show "
-                      "here at once: " + "; ".join(live))
+            self._say(tr("Opened in your browser. Models downloaded into a watched folder show "
+                         "here at once: ") + "; ".join(live))
         else:
-            self._say("Opened in your browser. Tip: add your Downloads folder to the catalog "
-                      "with «+» and watch it, so downloaded models show here at once.")
+            self._say(tr("Opened in your browser. Tip: add your Downloads folder to the catalog "
+                         "with «+» and watch it, so downloaded models show here at once."))
 
     # --- watching folders ----------------------------------------------------------
     def start_watching(self):
@@ -621,7 +629,7 @@ class AssetPanel(QWidget):
         added = [i for i in fresh if i.key not in self._known]
         if added:
             names = ", ".join(i.name for i in added[:4]) + (" …" if len(added) > 4 else "")
-            self._say(f"New in the catalog: {names}")
+            self._say(tr("New in the catalog: {names}", names=names))
         if self._cat_items is None:         # the catalog tab was not opened yet
             self._known |= fresh_paths
             self._new_paths |= {i.key for i in added}
@@ -650,7 +658,7 @@ class AssetPanel(QWidget):
     def insert_current(self, it=None):
         it = it if it is not None else self.cat_list.currentItem()
         if it is None:
-            self._say("Choose a model in the list first.")
+            self._say(tr("Choose a model in the list first."))
             return
         item = it.data(Qt.UserRole)
         if item.maps:
@@ -660,7 +668,7 @@ class AssetPanel(QWidget):
             g = self._build_from(self._model_file(item))
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("could not insert %s", item.key)
-            self._say(f"Could not insert {item.name}: {exc}")
+            self._say(tr("Could not insert {name}: {error}", name=item.name, error=exc))
             return
         self._place(g, ORIGIN)
 
@@ -672,7 +680,7 @@ class AssetPanel(QWidget):
             self._paint_with(color, {"name": item.name}, _CatalogSize)
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("could not use %s", item.key)
-            self._say(f"Could not use {item.name}: {exc}")
+            self._say(tr("Could not use {name}: {error}", name=item.name, error=exc))
 
     def _catalog_provider(self, it):
         item = it.data(Qt.UserRole)
@@ -743,10 +751,10 @@ class AssetPanel(QWidget):
         keep = self.ph_kind.currentData()
         self.ph_kind.clear()
         for label, kind in mod.KINDS:
-            self.ph_kind.addItem(label, kind)
+            self.ph_kind.addItem(tr(label), kind)
         self.ph_kind.setCurrentIndex(max(0, self.ph_kind.findData(keep)))
         self.ph_kind.blockSignals(False)
-        self.ph_credit.setText(mod.CREDIT + " Downloads are kept and reused.")
+        self.ph_credit.setText(tr(mod.CREDIT) + " " + tr("Downloads are kept and reused."))
         if load:
             self._ph_load()
         else:
@@ -758,18 +766,18 @@ class AssetPanel(QWidget):
         self.ph_list.clear()
         for s in self._sources.values():
             s.forget_thumbs()
-        self._say(f"Getting the list from {src.label}…")
+        self._say(tr("Getting the list from {source}…", source=src.label))
 
         def got(items, err):
             if self._ph_kind != (src.key, kind):
                 return
             if err and not items:
-                self._say(f"Could not get the list from {src.label}: {err}")
+                self._say(tr("Could not get the list from {source}: {error}", source=src.label, error=err))
                 return
             self._ph_items = items
             self.ph_cat.blockSignals(True)
             self.ph_cat.clear()
-            self.ph_cat.addItem("All categories", "")
+            self.ph_cat.addItem(tr("All categories"), "")
             for c in polyhaven.categories(items):
                 self.ph_cat.addItem(c, c)
             self.ph_cat.blockSignals(False)
@@ -843,26 +851,26 @@ class AssetPanel(QWidget):
 
     def _ph_use(self, it):
         if it is None:
-            self._say("Choose an asset in the list first.")
+            self._say(tr("Choose an asset in the list first."))
             return
         e = it.data(Qt.UserRole)
         src = self._source()
         kind, res = self.ph_kind.currentData(), self.ph_res.currentData()
-        self._say(f"Downloading «{e['name']}» ({res.upper()})…")
+        self._say(tr("Downloading «{name}» ({res})…", name=e["name"], res=res.upper()))
 
         def progress(i, n):
-            self._say(f"Downloading «{e['name']}» ({res.upper()})… {i}/{n}")
+            self._say(tr("Downloading «{name}» ({res})… {i}/{n}", name=e["name"], res=res.upper(), i=i, n=n))
 
         def done(path, err):
             if path is None:
-                self._say(f"Could not download «{e['name']}»: {err}")
+                self._say(tr("Could not download «{name}»: {error}", name=e["name"], error=err))
                 return
             try:
                 {"hdris": self._use_hdri, "materials": self._paint_with,
                  "models": self._place_model}[kind](path, e, src)
             except Exception as exc:  # noqa: BLE001 - say it, never crash the app
                 _log.exception("could not use %s", path)
-                self._say(f"Could not use «{e['name']}»: {exc}")
+                self._say(tr("Could not use «{name}»: {error}", name=e["name"], error=exc))
 
         src.download(kind, e, res, done, progress)
 
@@ -871,8 +879,8 @@ class AssetPanel(QWidget):
                        if type(w).__name__ == "StudioPanel" and hasattr(w, "set_hdri_path")), None)
         if studio is None:
             QApplication.clipboard().setText(str(path))
-            self._say(f"Downloaded «{e['name']}» to {path} (path copied). The Render Studio "
-                      "extension can use it as the 360° background.")
+            self._say(tr("Downloaded «{name}» to {path} (path copied). The Render Studio "
+                         "extension can use it as the 360° background.", name=e["name"], path=path))
             return
         studio.set_hdri_path(str(path))
         dock = studio
@@ -881,7 +889,7 @@ class AssetPanel(QWidget):
         if dock is not None:
             dock.show()
             dock.raise_()
-        self._say(f"«{e['name']}» is now Render Studio's 360° background.")
+        self._say(tr("«{name}» is now Render Studio's 360° background.", name=e["name"]))
 
     def _paint_with(self, path, e, src=None):
         sw, sh = (src or self._source()).tile_size_m(e)
@@ -905,9 +913,9 @@ class AssetPanel(QWidget):
             if callable(act):
                 act("paint")
         maps = len([k for k in (online.read_manifest(Path(path)) or {}) if k in online.MAP_KEYS]) - 1
-        extra = f", with {maps} more maps for the render" if maps > 0 else ""
-        self._say(f"Paint bucket loaded with «{name}» ({sw:g} × {sh:g} m{extra}): click the "
-                  "faces to paint.")
+        extra = tr(", with {n} more maps for the render", n=maps) if maps > 0 else ""
+        self._say(tr("Paint bucket loaded with «{name}» ({w:g} × {h:g} m{extra}): click the "
+                     "faces to paint.", name=name, w=sw, h=sh, extra=extra))
 
     def _place_model(self, path, e, src=None):
         g = self._build_from(path)

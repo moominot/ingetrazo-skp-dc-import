@@ -6,6 +6,10 @@ from . import template
 
 
 def html() -> str:
+    from .i18n import localized_text
+    translated = localized_text("help")
+    if translated is not None:
+        return translated.replace("{FILE_NAME}", template.FILE_NAME)
     return f"""
 <a name="files"></a>
 <h3>.skp files: how it works</h3>
@@ -17,7 +21,7 @@ import a .skp, edit it there and export it back.</p>
 <a name="import"></a>
 <h4>Import .skp keeping components…</h4>
 <ol>
-<li>Choose <b>Extensions ▸ Import .skp keeping components…</b> (or the <b>In</b> button of the toolbar).</li>
+<li>Choose <b>Extensions ▸ Import .skp keeping components…</b> (or the Import button of the toolbar).</li>
 <li>Pick the .skp file. The cursor shows it is working; big files take a moment.</li>
 <li>A summary says how many components and groups came in, how many of them have dynamic attributes, and lists the
 dynamic components.</li>
@@ -43,7 +47,7 @@ the file and the reason, and the drawing is left as it was.</p>
 <h4>Export .skp with dynamic components…</h4>
 <ol>
 <li>Make sure the <b>blank file</b> is ready (see below). If it is not, the export opens the settings window first.</li>
-<li>Choose <b>Extensions ▸ Export .skp with dynamic components…</b> (or the <b>Out</b> button).</li>
+<li>Choose <b>Extensions ▸ Export .skp with dynamic components…</b> (or the Export button of the toolbar).</li>
 <li>Choose the name and place; the <i>.skp</i> ending is added if you leave it out.</li>
 </ol>
 <p>What is written:</p>

@@ -1,0 +1,105 @@
+
+<a name="options"></a>
+<h3>Opciones del componente: cómo funciona</h3>
+<p>Un <b>componente dinámico</b> muestra a sus usuarios unas cuantas <b>opciones</b>: el número de estantes, el ancho, un tipo
+de puerta… Este panel es donde las cambian. Al aplicar, el componente se <b>redibuja</b> según las reglas de los componentes
+dinámicos: las copias, las piezas ocultas, los tamaños, las posiciones, los giros y los materiales se recalculan a partir de las
+opciones y de las fórmulas. Las opciones las define el autor del componente: un componente importado de un archivo .skp trae las suyas, y
+uno hecho aquí las recibe en <i>Atributos del componente ▸ Opciones…</i>.</p>
+
+<h4>Cómo se usa</h4>
+<ol>
+<li><b>Selecciona</b> un componente dinámico en el dibujo. El panel sigue la selección; el título muestra el nombre del
+componente y cuántas opciones tiene. (Si el título te pide que selecciones uno, la selección no es un componente
+dinámico.)</li>
+<li><b>Cambia</b> las opciones que quieras (véase más abajo).</li>
+<li>Pulsa <b>Aplicar</b> (o Intro en un cuadro de texto). El componente se redibuja, como <b>un solo paso de deshacer</b>.</li>
+</ol>
+
+<h4>El panel</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>Cuadro de texto</b></td><td>Una opción que escribes: un número (en las unidades propias de la opción, como cm) o
+un texto. Un valor que no es un número se avisa y no se aplica nada.</td></tr>
+<tr><td valign='top'><b>Lista</b></td><td>Una opción que eliges de una lista desplegable. Una opción puede llevar una fórmula, que
+se calcula al aplicar.</td></tr>
+<tr><td valign='top'><b>Valor de solo lectura</b></td><td>Una opción que el autor deja ver pero no cambiar (un precio
+o un tamaño calculados, por ejemplo). Se muestra como texto.</td></tr>
+<tr><td valign='top'><b>Aplicar</b></td><td>Redibuja el componente con las opciones que has cambiado (solo se envían esas).
+Un solo paso de deshacer.</td></tr>
+<tr><td valign='top'><b>Revertir</b></td><td>Devuelve los valores que tiene ahora el componente, descartando lo que has escrito.</td></tr>
+<tr><td valign='top'><b>Línea de mensajes</b></td><td>Bajo los botones. <i>Redibujado</i> cuando ha ido bien. Si alguna fórmula no se pudo
+evaluar, lo dice: esos atributos conservan su valor.</td></tr>
+</table>
+<p><b>Tamaños.</b> Si una opción es LenX, LenY o LenZ, cambiarla redimensiona el componente como se redimensiona un componente dinámico:
+la pieza se estira y lo que contiene la sigue, y luego las fórmulas de sus subpiezas fijan lo que controlan.</p>
+<p>Abre el panel desde <b>Extensiones ▸ Opciones del componente dinámico…</b>, desde la barra de herramientas o desde el menú contextual
+de un componente dinámico.</p>
+
+<a name="attributes"></a>
+<h3>Atributos del componente: cómo funciona</h3>
+<p>Un <b>componente dinámico</b> es un componente cuyo tamaño, posición, copias, visibilidad o material se
+<i>calculan</i> a partir de atributos y fórmulas, igual que los componentes dinámicos de los archivos .skp. Este panel es donde
+creas y editas esos atributos. Los datos se guardan a la manera propia del formato .skp, de modo que un componente hecho aquí sigue funcionando
+al exportarlo a .skp (con la extensión de archivos .skp).</p>
+
+<h4>En cinco pasos</h4>
+<ol>
+<li><b>Selecciona</b> un componente o un grupo en el dibujo (el panel sigue la selección).</li>
+<li>Elige las <b>unidades</b> en que se escriben sus fórmulas y pulsa <b>Hacer dinámico</b>.</li>
+<li>En el árbol, elige la <b>pieza</b> (el componente o una de sus subpiezas) que quieres editar.</li>
+<li><b>Añadir atributo</b>: elige uno predefinido (X, LenX, Copies…) o <i>Personalizado…</i> para el tuyo (primero una letra,
+luego letras, dígitos o _).</li>
+<li>Escribe un <b>valor</b> en la columna <i>Valor o =fórmula</i>, o una fórmula que empiece por <b>=</b>. La columna
+<i>Resultado</i> muestra lo que da ahora mismo. El dibujo se redibuja al pulsar Intro.</li>
+</ol>
+<p>Cada cambio es un paso de deshacer.</p>
+
+<h4>El panel</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>
+<tr><td valign='top'><b>Título</b></td><td>El componente que se está editando.</td></tr>
+<tr><td valign='top'><b>Hacer dinámico</b> + unidades</td><td>Da atributos dinámicos al componente o grupo seleccionado. Las unidades
+(centímetros, milímetros, metros, pulgadas, pies) son las que sus <b>fórmulas</b> usan para las longitudes: una fórmula
+<code>=4</code> en un componente en centímetros son 4 cm.</td></tr>
+<tr><td valign='top'><b>Árbol</b></td><td>El componente y sus subpiezas. Cada pieza tiene sus propios atributos.</td></tr>
+<tr><td valign='top'><b>Tabla</b></td><td><i>Atributo</i>: su nombre (en <b>negrita</b> si los usuarios lo ven en Opciones del
+componente). <i>Valor o =fórmula</i>: un valor fijo o una fórmula. <i>Resultado</i>: el valor calculado; <b>?</b> significa que
+la fórmula tiene un error, y entonces el atributo conserva su valor anterior.</td></tr>
+<tr><td valign='top'><b>Añadir atributo</b></td><td>Añade un atributo predefinido (véase más abajo) o uno personalizado.</td></tr>
+<tr><td valign='top'><b>Eliminar</b></td><td>Quita de la pieza el atributo seleccionado.</td></tr>
+<tr><td valign='top'><b>Opciones…</b></td><td>Cómo se muestra el atributo a las personas que usan el componente, en
+Opciones del componente: <i>Etiqueta mostrada</i> (el texto que ven); <i>Acceso</i> (no visible, solo lectura, un cuadro de texto o una
+lista); <i>Mostrar en</i> (unidades); y, para una lista, sus <i>Opciones de la lista</i>: pares de etiqueta y valor (el valor
+puede ser una fórmula, <code>=algo</code>). Eso es lo que hace de un atributo una <b>opción</b> que el usuario puede cambiar.</td></tr>
+</table>
+
+<h4>Atributos predefinidos</h4>
+<table cellspacing='0' cellpadding='3' width='100%'>{PREDEFINED}</table>
+
+<h4>Escribir fórmulas</h4>
+<p>Una fórmula empieza por <b>=</b>. Sin eso, lo que escribes es un valor fijo.</p>
+<ul>
+<li><b>Otros atributos.</b> Un nombre solo es un atributo de la <b>misma pieza</b>: <code>=lenx/2</code>.
+<code>Nombre!atr</code> es el atributo de otra pieza: <code>=parent!lenx-3.6</code>,
+<code>=Shelf!z+2</code>. <code>parent</code> es la pieza que contiene esta; <code>self</code> es esta pieza.
+Los demás nombres se buscan entre la propia pieza, sus antepasados, sus hermanos y sus hijos, y nada más allá.</li>
+<li><b>Operadores.</b> <code>+ − * / ^</code> (potencia) · <code>&amp;</code> une texto · comparaciones
+<code>= &lt;&gt; &lt; &gt; &lt;= &gt;=</code> (dan cierto o falso) · paréntesis.</li>
+<li><b>Valores.</b> Números (<code>3.5</code>), texto entre comillas (<code>"roble"</code>), <code>TRUE</code> y <code>FALSE</code>.</li>
+<li><b>Unidades.</b> Una fórmula ve las longitudes en las unidades de <i>su</i> componente, y el resultado se convierte de nuevo.
+Los ángulos son en grados.</li>
+<li><b>Cierto y falso.</b> Solo TRUE o un número <b>positivo</b> es cierto. <code>IF(0, a, b)</code> y
+<code>IF(-1, a, b)</code> dan b.</li>
+<li><b>Errores.</b> Si una fórmula falla (nombre desconocido, división por cero, un argumento fuera de rango…) el atributo conserva
+su valor anterior y el <i>Resultado</i> muestra <b>?</b>.</li>
+</ul>
+
+<h4>Ejemplo: un armario con N estantes</h4>
+<p>En el armario: atributo <code>n</code> = 3, definido como opción para que los usuarios puedan cambiarlo (Opciones… ▸ Acceso: cuadro de texto).
+En la pieza <i>Shelf</i>: <code>Copies</code> = <code>=parent!n-1</code>, <code>LenX</code> =
+<code>=parent!lenx-3.6</code> y <code>Z</code> = <code>=(copy+1)*parent!lenz/parent!n</code>.
+Cambiar <i>n</i> en Opciones del componente redibuja el armario con tantos estantes, repartidos uniformemente.</p>
+
+<h4>Funciones</h4>
+{FUNCTIONS}
+<p><small>Los nombres no distinguen mayúsculas de minúsculas. No se admiten: OnClick y animaciones, ni las funciones que leen la
+geometría (como el área de una cara).</small></p>

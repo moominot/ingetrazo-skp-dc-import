@@ -18,6 +18,8 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
+from .i18n import tr
+
 _log = logging.getLogger(__name__)
 
 SHA256 = "809a1ab73a20a192ab13aaff197afb1c67d0e9352f6a353a9cd8030919f8a6c3"
@@ -82,11 +84,12 @@ def check(path=None) -> tuple[str, str]:
     p = Path(path) if path else configured_path()
     digest = sha256_of(p)
     if digest is None:
-        return MISSING, f"No blank .skp at {p}"
+        return MISSING, tr("No blank .skp at {path}", path=p)
     if digest != SHA256:
-        return BAD, (f"{p.name} is not the expected file (SHA-256 {digest[:12]}…, "
-                     f"expected {SHA256[:12]}…). Only the exact original works.")
-    return OK, f"Ready: {p}"
+        return BAD, tr("{name} is not the expected file (SHA-256 {got}…, expected {want}…). "
+                       "Only the exact original works.",
+                       name=p.name, got=digest[:12], want=SHA256[:12])
+    return OK, tr("Ready: {path}", path=p)
 
 
 def bundled_path() -> Path:
@@ -100,7 +103,7 @@ def status() -> tuple[str, str]:
     if bundled.is_file():
         state, msg = check(bundled)
         if state == OK:
-            return OK, f"Included with this build: {bundled}"
+            return OK, tr("Included with this build: {path}", path=bundled)
     return check()
 
 

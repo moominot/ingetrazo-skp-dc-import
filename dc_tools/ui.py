@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
                                QWidget)
 
 from .dc import apply as A
+from .i18n import tr, translate_on_show
 from .dc import formula as F
 from .dc import options as O
 from .dc.evaluate import _num
@@ -121,7 +122,7 @@ class OptionsPanel(QWidget):
         self.rows = []                      # (Option, widget, initial)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(6, 6, 6, 6)
-        self.title = QLabel("Select a dynamic component.")
+        self.title = QLabel(tr("Select a dynamic component."))
         self.title.setWordWrap(True)
         outer.addWidget(self.title)
         self.scroll = QScrollArea()
@@ -150,6 +151,7 @@ class OptionsPanel(QWidget):
         self.status.setWordWrap(True)
         outer.addWidget(self.status)
         self._set_enabled(False)
+        translate_on_show(self)
         self.timer = QTimer(self)
         self.timer.setInterval(400)
         self.timer.timeout.connect(self._poll)
@@ -196,13 +198,13 @@ class OptionsPanel(QWidget):
         self._clear()
         self.status.setText("")
         if group is None:
-            self.title.setText("Select a dynamic component.")
+            self.title.setText(tr("Select a dynamic component."))
             self._set_enabled(False)
             return
         root, _frame = A.part_in_context(self.app.viewport.scene, group)
         ev = _LiveEvaluator(root)
         opts = O.options_of(root.attrs)
-        self.title.setText(f"<b>{root.name}</b> — {len(opts)} options")
+        self.title.setText(tr("<b>{name}</b> — {n} options", name=root.name, n=len(opts)))
         for opt in opts:
             if opt.name in LEN:
                 opt.value = live_value(root, opt.name)
@@ -268,7 +270,7 @@ class OptionsPanel(QWidget):
                 try:
                     options[opt.name] = O.parse(opt, w.text())
                 except ValueError:
-                    errors.append(f"{opt.label}: «{w.text()}» is not a number")
+                    errors.append(tr("{label}: «{text}» is not a number", label=opt.label, text=w.text()))
         return options, errors
 
     def apply(self):
@@ -282,11 +284,11 @@ class OptionsPanel(QWidget):
             new, problems = redraw_in_document(self.app.viewport, self.group, options)
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("redraw failed")
-            self.status.setText(f"Could not redraw: {exc}")
+            self.status.setText(tr("Could not redraw: {error}", error=exc))
             return
         self.show_group(new, force=True)
         if problems:
-            self.status.setText(f"Redrawn. {len(problems)} formula(s) could not be "
-                                "evaluated and kept their value.")
+            self.status.setText(tr("Redrawn. {n} formula(s) could not be evaluated "
+                                   "and kept their value.", n=len(problems)))
         else:
-            self.status.setText("Redrawn." if options else "Redrawn (no option changed).")
+            self.status.setText(tr("Redrawn.") if options else tr("Redrawn (no option changed)."))

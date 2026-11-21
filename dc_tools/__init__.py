@@ -24,35 +24,39 @@ def setup(app):
     if getattr(app, "api_version", 0) < 2:
         raise RuntimeError("Requires IngeTrazo with Extension API 2")
 
+    from .icons import panel_icon
+    from .i18n import tr
     acts = {}
     # Component Options: a side-tray tab that follows the selection.
     from .ui import OptionsPanel, selected_root
     panel = OptionsPanel(app)
-    dock = app.add_panel("Component Options", panel, start_hidden=True)
+    dock = app.add_panel(tr("Component Options"), panel, start_hidden=True,
+                         **panel_icon(app, "comp_options"))
 
     def show_options():
         app.show_panel(dock)
         panel.show_group(selected_root(app.viewport.scene), force=True)
 
     acts["options"] = app.add_menu_action(
-        "Dynamic component options…", show_options,
-        tip="Options of the selected dynamic component.")
+        tr("Dynamic component options…"), show_options,
+        tip=tr("Options of the selected dynamic component."))
 
     # Component Attributes: make dynamic, edit parts' attributes/formulas.
     from .ui_author import AttributesPanel, selected_top
     attr_panel = AttributesPanel(app)
     # A second panel of this extension needs its own name, or add_panel
     # hands back the first one (Component Options).
-    attr_dock = app.add_panel("Component Attributes", attr_panel, name="attributes",
-                              start_hidden=True)
+    attr_dock = app.add_panel(tr("Component Attributes"), attr_panel, name="attributes",
+                              start_hidden=True,
+                              **panel_icon(app, "comp_attributes"))
 
     def show_attributes():
         app.show_panel(attr_dock)
         attr_panel.show_root(selected_top(app.viewport.scene), ())
 
     acts["attributes"] = app.add_menu_action(
-        "Component attributes…", show_attributes,
-        tip="Make the selected component dynamic and edit its attributes and formulas.")
+        tr("Component attributes…"), show_attributes,
+        tip=tr("Make the selected component dynamic and edit its attributes and formulas."))
 
     if hasattr(app, "add_context_menu"):
         def context(menu, selection):
@@ -64,9 +68,9 @@ def setup(app):
             from PySide6.QtCore import QTimer
             menu.addSeparator()
             if dyn:
-                menu.addAction("Dynamic component options…",
+                menu.addAction(tr("Dynamic component options…"),
                                lambda: QTimer.singleShot(0, show_options))
-            menu.addAction("Component attributes…",
+            menu.addAction(tr("Component attributes…"),
                            lambda: QTimer.singleShot(0, show_attributes))
         app.add_context_menu(context)
 

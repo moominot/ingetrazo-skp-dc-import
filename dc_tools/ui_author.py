@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from .dc import apply as A
+from .i18n import tr, translate_on_show
 from .dc import author as AU
 from .dc import formula as F
 from .dc import options as O
@@ -103,19 +104,19 @@ class OptionsDialog(QDialog):
 
     def __init__(self, parent, name: str, attrs: dict):
         super().__init__(parent)
-        self.setWindowTitle(f"Attribute options — {name}")
+        self.setWindowTitle(tr("Attribute options — {name}", name=name))
         form = QFormLayout(self)
         self.label = QLineEdit(str(attrs.get(f"_{name}_formlabel") or attrs.get(f"_{name}_label") or name))
         form.addRow("Display label", self.label)
         self.access = QComboBox()
         for key, text in ACCESS_LABELS:
-            self.access.addItem(text, key)
+            self.access.addItem(tr(text), key)
         cur = str(attrs.get(f"_{name}_access") or "NONE").upper()
         self.access.setCurrentIndex(max(0, [k for k, _ in ACCESS_LABELS].index(cur) if cur in [k for k, _ in ACCESS_LABELS] else 0))
         form.addRow("Access", self.access)
         self.units = QComboBox()
         for u in VALUE_UNITS:
-            self.units.addItem(u.capitalize(), u)
+            self.units.addItem(tr(u.capitalize()), u)
         cu = str(attrs.get(f"_{name}_units") or "DEFAULT").upper()
         self.units.setCurrentIndex(max(0, self.units.findData(cu)))
         form.addRow("Display in", self.units)
@@ -184,7 +185,7 @@ class AttributesPanel(QWidget):
         self.make_btn.clicked.connect(self.make_dynamic)
         self.units = QComboBox()
         for u in UNITS:
-            self.units.addItem(u.capitalize(), u)
+            self.units.addItem(tr(u.capitalize()), u)
         self.units.setToolTip("The units its formulas are written in")
         mk.addWidget(self.make_btn)
         mk.addWidget(self.units)
@@ -216,7 +217,7 @@ class AttributesPanel(QWidget):
         for name, _u in AU.PREDEFINED:
             menu.addAction(AU.LABELS[name], lambda n=name: self.add_attribute(n))
         menu.addSeparator()
-        menu.addAction("Custom…", self.add_custom)
+        menu.addAction(tr("Custom…"), self.add_custom)
         self.add_btn.setMenu(menu)
         self.del_btn = QPushButton("Delete")
         self.del_btn.clicked.connect(self.delete_attribute)
@@ -234,6 +235,7 @@ class AttributesPanel(QWidget):
         self.timer.timeout.connect(self._poll)
         self.timer.start()
         self._refresh_enabled()
+        translate_on_show(self)
 
     def show_help(self):
         """The «?» button: the shared help window, at this panel's section."""
@@ -265,12 +267,12 @@ class AttributesPanel(QWidget):
         try:
             self.tree.clear()
             if root is None:
-                self.title.setText("Select a component or group.")
+                self.title.setText(tr("Select a component or group."))
             else:
                 name = AU.merged(root).get("_name") or root.name
                 dyn = A.is_dynamic_root(root)
                 self.title.setText(f"<b>{name}</b>" + ("" if dyn else
-                                   " — not dynamic yet: «Make dynamic» to give it attributes."))
+                                   tr(" — not dynamic yet: «Make dynamic» to give it attributes.")))
                 self._fill_tree(root, None, ())
                 self.tree.expandAll()
                 self._select_tree(self.path)
@@ -281,10 +283,10 @@ class AttributesPanel(QWidget):
 
     def _fill_tree(self, g, parent_item, path):
         a = AU.merged(g)
-        label = str(a.get("_name") or g.name or "(part)")
+        label = str(a.get("_name") or g.name or tr("(part)"))
         copy = _num(a.get("copy"))
         if isinstance(copy, float) and copy > 0:
-            label += f"  (copy {int(copy)})"
+            label += "  " + tr("(copy {n})", n=int(copy))
         item = QTreeWidgetItem([label])
         item.setData(0, Qt.UserRole, path)
         if isinstance(copy, float) and copy > 0:
@@ -292,7 +294,7 @@ class AttributesPanel(QWidget):
             f.setItalic(True)
             item.setFont(0, f)
             item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
-            item.setToolTip(0, "A copy made by Copies: edit the original")
+            item.setToolTip(0, tr("A copy made by Copies: edit the original"))
         if parent_item is None:
             self.tree.addTopLevelItem(item)
         else:
@@ -368,7 +370,7 @@ class AttributesPanel(QWidget):
                 res.setFlags(res.flags() & ~Qt.ItemIsEditable)
                 access = str(attrs.get(f"_{name}_access") or "").upper()
                 if access and access != "NONE":
-                    head.setToolTip(f"Shown to users ({access.lower()})")
+                    head.setToolTip(tr("Shown to users ({access})", access=access.lower()))
                     fh = QFont()
                     fh.setBold(True)
                     head.setFont(fh)
@@ -406,11 +408,11 @@ class AttributesPanel(QWidget):
                                                {id(t): dict(changes) for t in targets})
         except Exception as exc:  # noqa: BLE001
             _log.exception("attribute edit failed")
-            self.status.setText(f"Could not apply: {exc}")
+            self.status.setText(tr("Could not apply: {error}", error=exc))
             return
         self.show_root(new, self.path)
-        self.status.setText(message + (f" {len(problems)} formula(s) failed and kept their "
-                                       "value." if problems else ""))
+        self.status.setText(message + (" " + tr("{n} formula(s) failed and kept their value.",
+                                                n=len(problems)) if problems else ""))
 
     def _cell_changed(self, item):
         if self._filling or item.column() != 1:
@@ -436,12 +438,12 @@ class AttributesPanel(QWidget):
         try:
             value = O.parse(opt, text) if text else ""
         except ValueError:
-            self.status.setText(f"{name}: «{text}» is not a number")
+            self.status.setText(tr("{name}: «{text}» is not a number", name=name, text=text))
             QTimer.singleShot(0, self.show_part)
             return
         if isinstance(value, float):
             value = repr(value)               # SketchUp keeps option values as text
-        self._commit(AU.set_changes(name, value=value, formula=""), f"{name} set.")
+        self._commit(AU.set_changes(name, value=value, formula=""), tr("{name} set.", name=name))
 
     def add_attribute(self, name: str):
         g = self._part()
@@ -449,7 +451,7 @@ class AttributesPanel(QWidget):
             return
         attrs = AU.merged(g)
         if name in AU.attribute_names(attrs):
-            self.status.setText(f"{AU.LABELS.get(name, name)} is already there.")
+            self.status.setText(tr("{name} is already there.", name=AU.LABELS.get(name, name)))
             return
         value = ""
         if name in ("x", "y", "z", "lenx", "leny", "lenz"):
@@ -465,41 +467,41 @@ class AttributesPanel(QWidget):
                 value = "0"
         elif name in ("rotx", "roty", "rotz", "copies", "hidden"):
             value = "0"
-        self._commit(AU.set_changes(name, value=value), f"{AU.LABELS.get(name, name)} added.")
+        self._commit(AU.set_changes(name, value=value), tr("{name} added.", name=AU.LABELS.get(name, name)))
 
     def add_custom(self):
-        name, ok = QInputDialog.getText(self, "Add attribute", "Name (letters, digits, _):")
+        name, ok = QInputDialog.getText(self, tr("Add attribute"), tr("Name (letters, digits, _):"))
         if not ok:
             return
         name = name.strip().lower()
         if not AU.valid_name(name) or name in AU.PREDEFINED_NAMES:
-            self.status.setText(f"«{name}» cannot be an attribute name.")
+            self.status.setText(tr("«{name}» cannot be an attribute name.", name=name))
             return
-        self._commit(AU.set_changes(name, value="", label=name), f"{name} added.")
+        self._commit(AU.set_changes(name, value="", label=name), tr("{name} added.", name=name))
 
     def delete_attribute(self):
         name = self._selected_name()
         g = self._part()
         if not name or g is None:
             return
-        self._commit(AU.delete_changes(AU.merged(g), name), f"{name} deleted.")
+        self._commit(AU.delete_changes(AU.merged(g), name), tr("{name} deleted.", name=name))
 
     def edit_options(self):
         name = self._selected_name()
         g = self._part()
         if not name or g is None:
-            self.status.setText("Pick an attribute first.")
+            self.status.setText(tr("Pick an attribute first."))
             return
         dlg = OptionsDialog(self, name, AU.merged(g))
         if dlg.exec() == QDialog.Accepted:
-            self._commit(dlg.changes(name), f"{name}: options saved.")
+            self._commit(dlg.changes(name), tr("{name}: options saved.", name=name))
 
     def make_dynamic(self):
         g = self.root
         if g is None or A.is_dynamic_root(g):
             return
-        name, ok = QInputDialog.getText(self, "Make dynamic", "Component name:",
-                                        text=g.name or "Component")
+        name, ok = QInputDialog.getText(self, tr("Make dynamic"), tr("Component name:"),
+                                        text=g.name or tr("Component"))
         if not ok or not name.strip():
             return
         units = self.units.currentData()
@@ -508,7 +510,7 @@ class AttributesPanel(QWidget):
                                       lambda _sc: A.make_dynamic_tree(g, name.strip(), units))
         except Exception as exc:  # noqa: BLE001
             _log.exception("make dynamic failed")
-            self.status.setText(f"Could not make it dynamic: {exc}")
+            self.status.setText(tr("Could not make it dynamic: {error}", error=exc))
             return
         self.show_root(new, ())
-        self.status.setText("Dynamic. Add attributes to it and to its parts.")
+        self.status.setText(tr("Dynamic. Add attributes to it and to its parts."))

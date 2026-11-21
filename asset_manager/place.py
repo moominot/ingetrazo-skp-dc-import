@@ -12,6 +12,8 @@ from pathlib import Path
 from PySide6.QtCore import QEvent, QObject, QPointF, Qt, QTimer
 from PySide6.QtGui import QVector3D
 
+from .i18n import tr
+
 _log = logging.getLogger(__name__)
 
 MIME = "application/x-ingetrazo-asset-manager"
@@ -121,8 +123,8 @@ def read_file(viewport, path):
     elif suffix == ".skp":
         ext = sys.modules.get(SKP_EXT)
         if ext is None:
-            raise RuntimeError("Inserting a .skp keeping its components needs the "
-                               "«.skp files» extension (skp_dc_import).")
+            raise RuntimeError(tr("Inserting a .skp keeping its components needs the "
+                                  "«.skp files» extension (skp_dc_import)."))
         import importlib
         reader = importlib.import_module(SKP_EXT + ".reader")
         builder = importlib.import_module(SKP_EXT + ".builder")
@@ -131,7 +133,7 @@ def read_file(viewport, path):
         from formats import glb
         glb.load_glb(temp, path)
     else:
-        raise ValueError(f"{path.name}: not a model this panel can insert")
+        raise ValueError(tr("{name}: not a model this panel can insert", name=path.name))
     end = getattr(viewport, "end_group_edit", None)
     if callable(end):
         end()
