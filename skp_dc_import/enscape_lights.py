@@ -81,25 +81,25 @@ def parse(xml_text) -> dict | None:
         "shadow": True,
     }
     if kind == "Point":
-        light.update(type="point", name="Enscape point light")
+        light.update(type="point", name="Point light")
         if v["LightSourceRadius"] is not None:
             light["radius"] = v["LightSourceRadius"]
     elif kind == "Spot":
-        light.update(type="spot", name="Enscape spot light")
+        light.update(type="spot", name="Spot light")
         if v["BeamAngle"] is not None:
             light["spot_angle"] = math.degrees(v["BeamAngle"])
     elif kind == "Linear":
         length = (v["Length"] or 39.37007874015748) * _INCH
         # A tube along Y that shines all round: lights_of() splits it in four.
-        light.update(type="area", name="Enscape linear light", shape="rectangle",
+        light.update(type="area", name="Linear light", shape="rectangle",
                      size=_LINE_THICKNESS, size_y=length, _tube=True)
     elif kind == "Rectangular":
-        light.update(type="area", name="Enscape rectangular light", shape="rectangle",
+        light.update(type="area", name="Rectangular light", shape="rectangle",
                      size=(v["Width"] or 39.37007874015748) * _INCH,
                      size_y=(v["Length"] or 39.37007874015748) * _INCH)
     elif kind == "Disk":
         radius = (v["LightSourceRadius"] or 19.68503937007874) * _INCH
-        light.update(type="area", name="Enscape disk light", shape="disk",
+        light.update(type="area", name="Disk light", shape="disk",
                      size=2.0 * radius, size_y=2.0 * radius)
     else:
         return None
@@ -124,7 +124,7 @@ def _tube(light: dict) -> list:
     for i, (direction, along_y) in enumerate((((0, 0, 1), True), ((0, 0, -1), True),
                                               ((1, 0, 0), False), ((-1, 0, 0), False))):
         part = dict(light, id=uuid.uuid4().hex[:8],
-                    name="Enscape linear light %d/4" % (i + 1),
+                    name="Linear light %d/4" % (i + 1),
                     dir=[float(c) for c in direction],
                     pos=[c * thick / 2.0 for c in direction],
                     power=light["power"] / 4.0)

@@ -115,5 +115,11 @@
 "Ticked: watched in real time. Unticked: read again with Update.": "Marcada: es vigila en temps real. Desmarcada: es torna a llegir amb Actualitza.",
 "Add…": "Afegeix…",
 "Remove": "Elimina",
-"Open": "Obre"
+"Open": "Obre",
+"Reading {name}…": "Llegint {name}…",
+"Building the parts…": "Construint les peces…",
+"Preparing the drawing…": "Preparant el dibuix…",
+"Done": "Fet",
+"Importing {name}…": "Important {name}…",
+"Importing the model…": "Important el model…"
 }

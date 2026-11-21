@@ -17,7 +17,6 @@
 "Search the help (e.g. import, export, blank file)": "Cerca a l'ajuda (p. ex. importar, exportar, fitxer en blanc)",
 "{n} components and groups, {d} of them with dynamic attributes.": "{n} components i grups, {d} amb atributs dinàmics.",
 "{n} scenes, as saved views.": "{n} escenes, com a vistes desades.",
-"{n} Enscape lights, as Render Studio lights.": "{n} llums d'Enscape, com a llums del Render Studio.",
 "Dynamic components: ": "Components dinàmics: ",
 "Could not import {name}:\n{error}": "No s'ha pogut importar {name}:\n{error}",
 "Could not export:\n{error}": "No s'ha pogut exportar:\n{error}",
@@ -33,5 +32,11 @@
 "Choose file…": "Tria un fitxer…",
 "Export template:": "Plantilla d'exportació:",
 "Could not get the file:\n{error}\n\nYou can download it yourself from\n{url}\nand use «Choose file…».": "No s'ha pogut obtenir el fitxer:\n{error}\n\nPots baixar-lo tu mateix des de\n{url}\ni usar «Tria un fitxer…».",
-"Blank .skp (blank_v17.skp)": "El .skp en blanc (blank_v17.skp)"
+"Blank .skp (blank_v17.skp)": "El .skp en blanc (blank_v17.skp)",
+"Reading {name}…": "Llegint {name}…",
+"Building the parts…": "Construint les peces…",
+"Preparing the drawing…": "Preparant el dibuix…",
+"Done": "Fet",
+"Importing {name}…": "Important {name}…",
+"{n} lights from the file, as Render Studio lights.": "{n} llums del fitxer, com a llums del Render Studio."
 }

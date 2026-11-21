@@ -274,10 +274,12 @@ def _register_layers(scene, model, so) -> None:
             known.add(rec["name"])
 
 
-def build(scene, model, path) -> dict:
+def build(scene, model, path, progress=None) -> dict:
     """Add ``model`` (an OpenSKP ``SkpModel`` read from ``path``) to
     ``scene`` keeping its component tree. Returns a report dict. Call it
-    inside a command (``SnapshotImport``) so it is one undo step."""
+    inside a command (``SnapshotImport``) so it is one undo step.
+    ``progress(fraction)``, when given, is told how far the parts are built
+    (one step per definition: building its mesh is the slow part)."""
     from PySide6.QtGui import QMatrix4x4
     from core.group import Group
     from formats import openskp_compat
@@ -310,10 +312,14 @@ def build(scene, model, path) -> dict:
               "dynamic_roots": [], "faces": 0, "lights": 0,
               "scenes": scenes_added}
 
+    total = max(1, len(defs) + 1)
+
     def mesh_for(defn, inherited, painted_by_formula=False):
         key = (id(defn), inherited, painted_by_formula)
         mesh = meshes.get(key)
         if mesh is None:
+            if progress is not None:
+                progress(min(1.0, len(meshes) / total))
             faces, soft, loose = [], [], []
             if painted_by_formula:
                 faces = _sketchup_sided_faces(so, defn, identity, attr_map)
@@ -411,6 +417,8 @@ def build(scene, model, path) -> dict:
             g = place(inst, None, 0, True)
             if g is not None:
                 added.append(g)
+    if progress is not None:
+        progress(1.0)
     scene.groups.extend(added)
     scene.version += 1
     report["groups"] = len(added)
