@@ -17,7 +17,15 @@ components and export it back.
 
 - **Import SketchUp keeping components…** opens a `.skp` with its component tree intact, every
   part a nested IngeTrazo component, and each part's Dynamic Components attributes, formulas and
-  options kept, in SketchUp's own format.
+  options kept, in SketchUp's own format. The file's **scenes** come in as saved views (camera,
+  projection and hidden tags), and its **Enscape lights** as Render Studio lights (below).
+- **Enscape lights.** A component with Enscape's `Enscape.Light` data (point, spot, linear,
+  rectangular and disk lights) becomes a Render Studio light on that component, in its axes:
+  lumens as they are, sizes in metres, beam angle in degrees, shining along the component's +Z.
+  A linear light is a tube that shines all round, so it comes in as four thin area lights (+Z,
+  -Z, +X, -X) with a quarter of the lumens each. Enscape has no colour for a light: they are
+  white. The component is only the light's symbol: it stays in the drawing and Render Studio
+  (0.17.0 or later) leaves it out of the render.
 - **Export SketchUp (.skp) with dynamic components…** writes the document as a `.skp`
   (SketchUp 2017 format, which every later SketchUp opens) with its groups, components,
   materials and textures, and each part's Dynamic Components data: the components work as
@@ -107,11 +115,11 @@ components and export it back.
 
 ![The right-click menu on a proxy](docs/asset_manager_proxy_menu.png)
 
-Every change is one undo step. Versions: skp_dc_import 0.6.4, dc_tools 0.3.4, asset_manager 0.3.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. Versions: skp_dc_import 0.7.0, dc_tools 0.3.4, asset_manager 0.3.1, for IngeTrazo 0.6 (Extension API 2).
 
 ## Releases
 
-The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `dc_tools-0.3.4.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`, `skp_dc_import-0.6.3.zip`, `skp_dc_import-0.6.4.zip`, `asset_manager-0.2.0.zip`, `asset_manager-0.3.0.zip`, `asset_manager-0.3.1.zip`), pinned by the catalog by
+The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `dc_tools-0.3.4.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`, `skp_dc_import-0.6.3.zip`, `skp_dc_import-0.6.4.zip`, `skp_dc_import-0.7.0.zip`, `asset_manager-0.2.0.zip`, `asset_manager-0.3.0.zip`, `asset_manager-0.3.1.zip`), pinned by the catalog by
 commit and SHA-256. They do **not** contain `blank_v17.skp` (see «SketchUp files» above). Unpack one in IngeTrazo's plugins
 folder, or install it from **Extensions ▸ Manage extensions…**.
 
