@@ -116,10 +116,12 @@ def read_file(viewport, path):
     from core.scene import Scene
     path = Path(path)
     suffix = path.suffix.lower()
+    from .progress import current, in_thread, scaled
+    cb = current()                     # the progress window that is up, if any
     temp = Scene()
     if suffix == ".igz":
         from formats import igz
-        igz.load_into(temp, path)
+        igz.load_into(temp, path, progress=scaled(cb, 0.0, 1.0, tr("Reading {name}…", name=path.name)))
     elif suffix == ".skp":
         ext = sys.modules.get(SKP_EXT)
         if ext is None:
@@ -128,10 +130,17 @@ def read_file(viewport, path):
         import importlib
         reader = importlib.import_module(SKP_EXT + ".reader")
         builder = importlib.import_module(SKP_EXT + ".builder")
-        builder.build(temp, reader.parse(path), path)
+        model = in_thread(lambda: reader.parse(path), scaled(cb, 0.0, 0.5),
+                          tr("Reading {name}…", name=path.name))
+        import inspect
+        if "progress" in inspect.signature(builder.build).parameters:
+            builder.build(temp, model, path,
+                          progress=scaled(cb, 0.5, 1.0, tr("Building the parts…")))
+        else:                          # an older .skp importer, without progress
+            builder.build(temp, model, path)
     elif suffix in (".gltf", ".glb"):
         from formats import glb
-        glb.load_glb(temp, path)
+        glb.load_glb(temp, path, progress=scaled(cb, 0.0, 1.0, tr("Reading {name}…", name=path.name)))
     else:
         raise ValueError(tr("{name}: not a model this panel can insert", name=path.name))
     end = getattr(viewport, "end_group_edit", None)
@@ -180,10 +189,20 @@ def skp_from_urls(mime):
     return path if path.suffix.lower() == ".skp" and path.is_file() else None
 
 
+def from_file(build):
+    """Mark a drag provider as one that reads a file: it is built after the
+    drop, with a progress window, instead of while the drag is under way."""
+    build.slow = True
+    return build
+
+
 class DropOnView(QObject):
     """Event filter for the 3-D views: a model dragged from the panel
     follows the cursor as the placement tool's preview while it is over the
-    view, and dropping it places it there, snapped like a click."""
+    view, and dropping it places it there, snapped like a click. A model
+    that has to be read from a file (``from_file``) is read once it is
+    dropped, with a progress window, and placed where it was dropped: a
+    window cannot open in the middle of a drag."""
 
     def __init__(self, window, parent=None):
         super().__init__(parent)
@@ -209,6 +228,7 @@ class DropOnView(QObject):
 
     def begin(self, provider):
         self.provider = provider
+        self._slow = bool(getattr(provider, "slow", False))
         self._group = self._anchor = None
 
     def end(self):
@@ -237,8 +257,8 @@ class DropOnView(QObject):
                 # keeps the components and their dynamic data, instead of
                 # the window's, which flattens them.
                 self._explorer = True
-                self.begin(lambda vp=obj, p=path: (group_from_file(vp, p),
-                                                   QVector3D(0.0, 0.0, 0.0)))
+                self.begin(from_file(lambda vp=obj, p=path: (group_from_file(vp, p),
+                                                             QVector3D(0.0, 0.0, 0.0))))
         if not (mime.hasFormat(MIME) or self._explorer) or self.provider is None:
             return False
         try:
@@ -250,7 +270,10 @@ class DropOnView(QObject):
 
     def _handle(self, t, obj, ev):
         try:
-            if t == QEvent.DragEnter:
+            if getattr(self, "_slow", False):
+                if t == QEvent.Drop:
+                    self._drop_later(obj, ev)
+            elif t == QEvent.DragEnter:
                 self._enter(obj)
             elif t == QEvent.DragMove:
                 self._hover(obj, ev)
@@ -316,6 +339,39 @@ class DropOnView(QObject):
         # the document inside the drag-and-drop dispatch aborted Qt a moment
         # later («Cannot destroy paint device that is being painted»).
         QTimer.singleShot(0, lambda: tool.place_at(vp, world))   # one undo step
+
+    def _drop_later(self, vp, ev):
+        """A model read from a file: where it was dropped is kept, and it is
+        read and placed there once the drop is over, with a progress window."""
+        ctx = self._ctx(vp, ev)
+        world = QVector3D(ctx.world) if ctx is not None else None
+        build = self.provider
+        QTimer.singleShot(0, lambda: self._build_and_place(vp, build, world))
+
+    def _build_and_place(self, vp, build, world):
+        from tools.place_group import PlaceGroupTool
+        from . import progress
+        try:
+            with progress.window(self.window, tr("Importing the model…")) as cb:
+                with progress.stage(0.0, 0.85):
+                    group, anchor = build()
+                if group is None:
+                    raise RuntimeError("the model has no geometry")
+                if world is None:
+                    start_place(self.window, group, anchor)
+                    return
+                PlaceGroupTool(group, anchor=anchor).place_at(vp, world)   # one undo step
+                prepare = getattr(vp, "prepare_drawing", None)
+                if callable(prepare):
+                    try:
+                        prepare(progress.scaled(cb, 0.85, 1.0, tr("Preparing the drawing…")))
+                    except Exception:  # noqa: BLE001 - a display cache only
+                        _log.exception("preparing the drawing failed")
+                cb(1.0, tr("Done"))
+        except Exception as exc:  # noqa: BLE001 - say it, never crash the app
+            _log.exception("drop failed")
+            if self.on_error:
+                self.on_error(str(exc))
 
     def _cancel(self):
         tool, vp = self._tool, self._vp

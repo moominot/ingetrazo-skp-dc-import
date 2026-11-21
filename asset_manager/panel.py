@@ -644,11 +644,9 @@ class AssetPanel(QWidget):
         self._fill_catalog()
 
     def _build_from(self, path):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
-        try:
+        from . import progress
+        with progress.window(self.window(), tr("Importing {name}…", name=Path(path).name)):
             return self._model_group(path)
-        finally:
-            QApplication.restoreOverrideCursor()
 
     @staticmethod
     def _model_file(item):
@@ -686,7 +684,8 @@ class AssetPanel(QWidget):
         item = it.data(Qt.UserRole)
         if item.maps:
             return None                     # a material is painted, not dragged
-        return lambda: (self._model_group(self._model_file(item), interactive=False), ORIGIN)
+        return place.from_file(
+            lambda: (self._model_group(self._model_file(item), interactive=False), ORIGIN))
 
     # =========================================================================
     # Online: Poly Haven, ambientCG
@@ -847,7 +846,7 @@ class AssetPanel(QWidget):
         main = self._source().cached("models", e, self.ph_res.currentData())
         if main is None:
             return None
-        return lambda: (self._model_group(main, interactive=False), ORIGIN)
+        return place.from_file(lambda: (self._model_group(main, interactive=False), ORIGIN))
 
     def _ph_use(self, it):
         if it is None:

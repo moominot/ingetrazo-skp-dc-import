@@ -17,7 +17,6 @@
 "Search the help (e.g. import, export, blank file)": "Buscar en la ayuda (p. ej. importar, exportar, archivo en blanco)",
 "{n} components and groups, {d} of them with dynamic attributes.": "{n} componentes y grupos, {d} con atributos dinámicos.",
 "{n} scenes, as saved views.": "{n} escenas, como vistas guardadas.",
-"{n} Enscape lights, as Render Studio lights.": "{n} luces de Enscape, como luces de Render Studio.",
 "Dynamic components: ": "Componentes dinámicos: ",
 "Could not import {name}:\n{error}": "No se pudo importar {name}:\n{error}",
 "Could not export:\n{error}": "No se pudo exportar:\n{error}",
@@ -33,5 +32,11 @@
 "Choose file…": "Elegir archivo…",
 "Export template:": "Plantilla de exportación:",
 "Could not get the file:\n{error}\n\nYou can download it yourself from\n{url}\nand use «Choose file…».": "No se pudo obtener el archivo:\n{error}\n\nPuedes descargarlo tú mismo desde\n{url}\ny usar «Elegir archivo…».",
-"Blank .skp (blank_v17.skp)": "El .skp en blanco (blank_v17.skp)"
+"Blank .skp (blank_v17.skp)": "El .skp en blanco (blank_v17.skp)",
+"Reading {name}…": "Leyendo {name}…",
+"Building the parts…": "Construyendo las piezas…",
+"Preparing the drawing…": "Preparando el dibujo…",
+"Done": "Hecho",
+"Importing {name}…": "Importando {name}…",
+"{n} lights from the file, as Render Studio lights.": "{n} luces del archivo, como luces de Render Studio."
 }

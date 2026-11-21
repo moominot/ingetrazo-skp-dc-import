@@ -11,7 +11,7 @@ separate *dc_tools* extension, which reads the same data.
 """
 from __future__ import annotations
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 import logging
 from pathlib import Path
@@ -23,21 +23,38 @@ _log = logging.getLogger(__name__)
 _TITLE = tr("Import .skp keeping components")
 
 
-def import_file(viewport, path) -> dict:
+def import_file(viewport, path, progress=None) -> dict:
     """Import ``path`` into the viewport's document as ONE undo step.
     Returns the report (counts of placements, dynamic parts, …). Usable
-    from the Python Console or the AI bridge, with no dialog."""
+    from the Python Console or the AI bridge, with no dialog.
+
+    ``progress(fraction, text)`` (see :mod:`.progress`), when given, follows
+    the three stages: reading the file (off the UI thread), building the
+    parts, and preparing the drawing so the first orbit does not stall."""
     from core.history import SnapshotImport
     from . import builder, reader
+    from .progress import in_thread, scaled
 
-    model = reader.parse(path)            # the heavy part, outside the history
+    name = Path(path).name
+    # The heavy part, outside the history (off the UI thread with a window).
+    model = in_thread(lambda: reader.parse(path), scaled(progress, 0.0, 0.45),
+                      tr("Reading {name}…", name=name))
     report: dict = {}
+    building = scaled(progress, 0.45, 0.85, tr("Building the parts…"))
 
     def mutate(scene):
-        report.update(builder.build(scene, model, path))
+        report.update(builder.build(scene, model, path, progress=building))
 
     viewport.history.execute(SnapshotImport(mutate))
     viewport.notify_scene_changed()
+    prepare = getattr(viewport, "prepare_drawing", None)
+    if progress is not None and callable(prepare):
+        try:
+            prepare(scaled(progress, 0.85, 1.0, tr("Preparing the drawing…")))
+        except Exception:  # noqa: BLE001 - a display cache only; the first paint builds it
+            _log.exception("preparing the drawing failed")
+    if progress is not None:
+        progress(1.0, tr("Done"))
     return report
 
 
@@ -48,7 +65,7 @@ def _summary(report: dict) -> str:
     if report.get("scenes"):
         text += "\n" + tr("{n} scenes, as saved views.", n=report["scenes"])
     if report.get("lights"):
-        text += "\n" + tr("{n} Enscape lights, as Render Studio lights.", n=report["lights"])
+        text += "\n" + tr("{n} lights from the file, as Render Studio lights.", n=report["lights"])
     if roots:
         text += "\n" + tr("Dynamic components: ") + ", ".join(roots[:12])
         if len(roots) > 12:
@@ -67,17 +84,16 @@ def setup(app):
             app.window, _TITLE, "", tr(".skp files (*.skp)"))
         if not path:
             return
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        from .progress import window
         try:
-            report = import_file(app.viewport, path)
+            with window(app.window, tr("Importing {name}…", name=Path(path).name)) as cb:
+                report = import_file(app.viewport, path, progress=cb)
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("import of %s failed", path)
-            QApplication.restoreOverrideCursor()
             QMessageBox.warning(app.window, _TITLE,
                                 tr("Could not import {name}:\n{error}",
                                    name=Path(path).name, error=exc))
             return
-        QApplication.restoreOverrideCursor()
         QMessageBox.information(app.window, _TITLE, _summary(report))
 
     acts = {}

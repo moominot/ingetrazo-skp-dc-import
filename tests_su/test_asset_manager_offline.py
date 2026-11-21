@@ -311,12 +311,13 @@ ok(not drop.eventFilter(vp, QDragEnterEvent(QPoint(1, 1), Qt.CopyAction, txt_mim
    "a dragged file that is not a .skp is left to the window")
 before = len(scene.groups)
 ev = QDragEnterEvent(QPoint(10, 10), Qt.CopyAction, url_mime, Qt.LeftButton, Qt.NoModifier)
-ok(drop.eventFilter(vp, ev) and ev.isAccepted() and asked == [skp_file], "a dragged .skp is read by our importer")
+ok(drop.eventFilter(vp, ev) and ev.isAccepted() and asked == [],
+   "a dragged .skp is taken by our importer (read once dropped, with a progress window)")
 drop.eventFilter(vp, QDragMoveEvent(QPoint(30, 40), Qt.CopyAction, url_mime, Qt.LeftButton, Qt.NoModifier))
 drop.eventFilter(vp, QDropEvent(QPointF(20, 20), Qt.CopyAction, url_mime, Qt.LeftButton, Qt.NoModifier))
 qa.processEvents()
-ok(len(scene.groups) == before + 1 and drop.provider is None and not drop._explorer,
-   "and placed where it was dropped; the drag leaves nothing behind")
+ok(asked == [skp_file] and len(scene.groups) == before + 1 and drop.provider is None and not drop._explorer,
+   "read by our importer and placed where it was dropped; the drag leaves nothing behind")
 drop.eventFilter(vp, QDragEnterEvent(QPoint(10, 10), Qt.CopyAction, url_mime, Qt.LeftButton, Qt.NoModifier))
 from PySide6.QtGui import QDragLeaveEvent
 drop.eventFilter(vp, QDragLeaveEvent())

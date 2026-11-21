@@ -115,5 +115,11 @@
 "Ticked: watched in real time. Unticked: read again with Update.": "Marcada: se vigila en tiempo real. Sin marcar: se vuelve a leer con Actualizar.",
 "Add…": "Añadir…",
 "Remove": "Quitar",
-"Open": "Abrir"
+"Open": "Abrir",
+"Reading {name}…": "Leyendo {name}…",
+"Building the parts…": "Construyendo las piezas…",
+"Preparing the drawing…": "Preparando el dibujo…",
+"Done": "Hecho",
+"Importing {name}…": "Importando {name}…",
+"Importing the model…": "Importando el modelo…"
 }

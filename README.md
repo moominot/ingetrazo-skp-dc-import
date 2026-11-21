@@ -115,7 +115,7 @@ components and export it back.
 
 ![The right-click menu on a proxy](docs/asset_manager_proxy_menu.png)
 
-Every change is one undo step. Versions: skp_dc_import 0.7.0, dc_tools 0.3.4, asset_manager 0.3.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.7.1, dc_tools 0.3.4, asset_manager 0.3.2, for IngeTrazo 0.6 (Extension API 2).
 
 ## Releases
 
