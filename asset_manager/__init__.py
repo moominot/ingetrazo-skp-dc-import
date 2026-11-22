@@ -2,7 +2,7 @@
 """Components manager for IngeTrazo: what the drawing holds (with previews,
 a mark on dynamic components, select every instance, drag a copy onto the
 view), catalog folders of your own models (.igz, .skp), and free online
-assets: Poly Haven's HDRIs, materials and 3-D models, ambientCG's materials.
+assets: Poly Haven's HDRIs, materials and 3-D models, ambientCG's HDRIs and materials.
 
 It reads the dynamic-component data (``group.ext["skp_dc_import"]``) when
 there is any; inserting a .skp keeping its components uses the ``.skp
@@ -12,7 +12,7 @@ format of the Proxies extension (``group.ext["proxy_tool"]``).
 """
 from __future__ import annotations
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"
 
 import logging
 
@@ -27,7 +27,7 @@ def setup(app):
     from . import inventory
     from .i18n import tr
     from .icons import panel_icon
-    from .panel import AssetPanel
+    from .panel import STAND_IN_TIP, AssetPanel
     panel = AssetPanel(app)
     dock = app.add_panel(tr("Components"), panel, name="components",
                           **panel_icon(app, "comp_manager"))
@@ -56,9 +56,30 @@ def setup(app):
             menu.addAction(tr("Select all instances of «{name}»", name=name),
                            lambda: QTimer.singleShot(0, lambda: panel.select_like(g)))
         try:
+            stand_in_menu(menu, selection)
+        except Exception:  # noqa: BLE001 - a menu entry must never break the menu
+            _log.exception("stand-in menu entry failed")
+        try:
             proxy_menu(menu, selection)
         except Exception:  # noqa: BLE001 - a menu entry must never break the menu
             _log.exception("proxy menu entries failed")
+
+    def stand_in_menu(menu, selection):
+        from . import stand_in
+        groups = stand_in.selected_groups(selection)
+        if not groups:
+            return
+        flag = stand_in.state_of(groups)
+        n = f" ({len(groups)})" if len(groups) > 1 else ""
+        act = menu.addAction(tr("Stand-in: not rendered, shown translucent") + n)
+        act.setToolTip(tr(STAND_IN_TIP))
+        act.setCheckable(True)
+        act.setChecked(bool(flag))
+        want = not bool(flag)       # mixed selection: mark them all
+
+        def toggle():
+            QTimer.singleShot(0, lambda: panel.set_stand_in(groups, want))
+        act.triggered.connect(toggle)
 
     def proxy_menu(menu, selection):
         from . import proxy_ops

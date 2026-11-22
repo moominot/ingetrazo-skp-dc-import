@@ -38,5 +38,6 @@
 "Preparing the drawing…": "Preparant el dibuix…",
 "Done": "Fet",
 "Importing {name}…": "Important {name}…",
-"{n} lights from the file, as Render Studio lights.": "{n} llums del fitxer, com a llums del Render Studio."
+"{n} lights from the file, as Render Studio lights.": "{n} llums del fitxer, com a llums del Render Studio.",
+"{n} library objects as stand-ins (translucent, not rendered).": "{n} objectes de la biblioteca com a marcadors (translúcids, no es renderitzen)."
 }

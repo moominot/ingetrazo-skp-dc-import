@@ -38,5 +38,6 @@
 "Preparing the drawing…": "Preparando el dibujo…",
 "Done": "Hecho",
 "Importing {name}…": "Importando {name}…",
-"{n} lights from the file, as Render Studio lights.": "{n} luces del archivo, como luces de Render Studio."
+"{n} lights from the file, as Render Studio lights.": "{n} luces del archivo, como luces de Render Studio.",
+"{n} library objects as stand-ins (translucent, not rendered).": "{n} objetos de la biblioteca como marcadores (translúcidos, no se renderizan)."
 }

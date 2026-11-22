@@ -11,7 +11,7 @@ separate *dc_tools* extension, which reads the same data.
 """
 from __future__ import annotations
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"
 
 import logging
 from pathlib import Path
@@ -64,6 +64,8 @@ def _summary(report: dict) -> str:
               n=report.get("placements", 0), d=report.get("dynamic", 0))
     if report.get("scenes"):
         text += "\n" + tr("{n} scenes, as saved views.", n=report["scenes"])
+    if report.get("stand_ins"):
+        text += "\n" + tr("{n} library objects as stand-ins (translucent, not rendered).", n=report["stand_ins"])
     if report.get("lights"):
         text += "\n" + tr("{n} lights from the file, as Render Studio lights.", n=report["lights"])
     if roots:
