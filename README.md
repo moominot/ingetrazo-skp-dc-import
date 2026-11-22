@@ -86,11 +86,11 @@ components and export it back.
   (Extensions ▸ Components manager settings…). Download into a watched folder — your Downloads
   folder, for instance — and the model is in the catalog, ready to drag onto the view.
 - **Online** — free CC0 assets from **Poly Haven** (polyhaven.com: HDRIs, materials, 3-D
-  models) and **ambientCG** (ambientcg.com: HDRIs and materials). The online assets have a tab each:
+  models) and **ambientCG** (ambientcg.com: HDRIs, materials, decals and atlases). The online assets have a tab each:
   **360° backgrounds**, **Materials** and **Models**. **HDRIs** become Render Studio's 360°
   background; **materials** come with all their maps (colour, normal, roughness, AO,
   displacement, metal…) and load the paint bucket with the colour image at the material's real
-  size, with a `<colour image>.pbr.json` manifest next to it naming the other maps for a
+  size (ambientCG's **Decals** and **Atlases** are in this tab too, as categories of their own; they come with an opacity map), with a `<colour image>.pbr.json` manifest next to it naming the other maps for a
   renderer; **3-D models** (glTF) follow the cursor to be placed. Each source is reached only
   on its own servers, over https (redirects checked one by one); downloads are checked (MD5
   where the source gives it), kept in the extension's folder and reused. From an ambientCG zip
