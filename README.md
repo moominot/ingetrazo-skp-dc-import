@@ -133,6 +133,24 @@ components and export it back.
 
 Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.7.1, dc_tools 0.3.4, asset_manager 0.3.2, for IngeTrazo 0.6 (Extension API 2).
 
+
+## Render Studio
+
+These three extensions have a fourth sibling by the same author, **[Render Studio](https://github.com/moominot/ingetrazo-render-studio)**:
+photographic renders through Blender (looks, a sun, a 360° background, a material editor, lights, a live preview).
+It is a separate extension and none of the three needs it, but they meet in the drawing's data:
+
+- **SketchUp files** brings the file's lights in as Render Studio lights, and marks the light's symbol so the render
+  leaves it out (Render Studio 0.17.0 or later).
+- **Components manager**: its online **HDRIs** are Render Studio's 360° backgrounds; its **materials** come with a
+  `.pbr.json` manifest that Render Studio reads to use the normal, roughness, AO, displacement and metal maps; its
+  **proxies** are rendered by Render Studio as their full model; and a **stand-in** (translucent in the drawing) is
+  left out of the render.
+- **Dynamic components**: a component redrawn from its options is just geometry to Render Studio.
+
+So a `.skp` can be imported with its components and lights, its dynamic components edited, its trees and
+furniture swapped for downloaded models, and the result rendered, each step by the extension that does it.
+
 ## Releases
 
 The packaged extensions are in `releases/` (`dc_tools-0.3.0.zip`, `dc_tools-0.3.1.zip`, `dc_tools-0.3.2.zip`, `dc_tools-0.3.3.zip`, `dc_tools-0.3.4.zip`, `dc_tools-0.3.5.zip`, `skp_dc_import-0.6.0.zip`, `skp_dc_import-0.6.1.zip`, `skp_dc_import-0.6.2.zip`, `skp_dc_import-0.6.3.zip`, `skp_dc_import-0.6.4.zip`, `skp_dc_import-0.7.0.zip`, `skp_dc_import-0.7.1.zip`, `asset_manager-0.2.0.zip`, `asset_manager-0.3.0.zip`, `asset_manager-0.3.1.zip`, `asset_manager-0.3.2.zip`), pinned by the catalog by
