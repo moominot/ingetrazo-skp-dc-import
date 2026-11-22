@@ -204,6 +204,21 @@ maps = ambientcg.extract_maps(zp, out)
 ok(sorted(maps) == ["color", "normal_gl", "roughness"] and sorted(p.name for p in out.iterdir())
    == ["Bricks097_1K-JPG_Color.jpg", "Bricks097_1K-JPG_NormalGL.jpg", "Bricks097_1K-JPG_Roughness.jpg"]
    and not (zroot / "evil_Color.jpg").exists(), "only the maps come out of the zip, flat, nothing outside the folder")
+# ambientCG HDRIs: the full-range 360° image is taken out of the zip, nothing else
+names = ["Night011_1K.usdc", "Night011_1K_HDR.exr", "Night011_1K_TONEMAPPED.jpg", "Night011_1K.blend", "Night011.png"]
+ok(ambientcg.pick_hdri(names) == "Night011_1K_HDR.exr" and ambientcg.pick_hdri(["a.hdr", "b.exr"]) == "a.hdr"
+   and ambientcg.pick_hdri(["a_TONEMAPPED.jpg", "x.blend"]) is None, "ambientCG HDRI: the full-range image is the one picked")
+hz = zroot / "hdri.zip"
+with zipfile.ZipFile(hz, "w") as z:
+    for n in names: z.writestr(n, b"x" * 10)
+hout = zroot / "hdri_out"; hout.mkdir()
+img = ambientcg.extract_hdri(hz, hout)
+ok(img.name == "Night011_1K_HDR.exr" and [p.name for p in hout.iterdir()] == ["Night011_1K_HDR.exr"], "only the 360° image is written")
+hp = {"foundAssets": [{"assetId": "NightEnvironmentHDRI011", "dataType": "HDRI", "displayName": "Night Environment HDRI 011",
+                       "displayCategory": "Night Environment HDRI", "tags": ["night"], "previewImage": {"128-PNG": "u"}},
+                      {"assetId": "Bricks097", "dataType": "Material", "displayName": "Bricks 097"}]}
+ok([e["id"] for e in ambientcg.entries([hp], "hdris")] == ["NightEnvironmentHDRI011"]
+   and [e["id"] for e in ambientcg.entries([hp])] == ["Bricks097"], "listings keep only the kind asked for")
 ok(online.host_allowed("https://acg-download.struffelproductions.com/x.zip", ambientcg.HOSTS)
    and online.host_allowed("https://ambientcg.com/get?file=a", ambientcg.HOSTS)
    and not online.host_allowed("https://struffelproductions.com.evil.org/x", ambientcg.HOSTS)
@@ -258,11 +273,14 @@ class Snap:
 class History:
     def __init__(self, scene): self.scene = scene; self.done = []
     def execute(self, cmd): cmd.do(self.scene); self.done.append(cmd)
+    def undo(self): self.done.pop().undo(self.scene)
 class Win(QWidget):
     def __init__(self):
         super().__init__(); self.tools = []; self.placed = []
     def _activate_tool(self, name): self.tools.append(name)
     def _start_place(self, group, anchor=None): self.placed.append((group, anchor))
+    def _replacement_choices(self, sel): return [("Other  (1×)", scene.groups[0])]
+    def replace_selection_with(self, source): self.replaced = (list(scene.selection), source); return len(scene.selection)
 class VP(QWidget):
     def __init__(self, scene, win):
         super().__init__(win); self.scene = scene; self.history = History(scene); self.tool = None
@@ -271,6 +289,8 @@ class VP(QWidget):
     def flash_status(self, *a): pass
     def notify_scene_changed(self): pass
     def end_group_edit(self): pass
+    def begin_group_edit(self, g): self.edited = g
+    def update(self): pass
 win = Win(); vp = VP(scene, win); win.viewport = vp
 drop = place.DropOnView(win)
 drop.watch_all()
@@ -340,6 +360,22 @@ ok(len(scene.selection) == sum(1 for g in scene.groups if g.mesh is src.mesh) ==
    "Select all picks every placement of the component")
 panel.place_copy()
 ok(win.placed and win.placed[-1][0].mesh is src.mesh, "Place copy hands a copy to the placement tool")
+# stand-in, Edit and Replace all on the chosen component
+from asset_manager import stand_in as _SI
+entry = panel._current_entry()
+panel.stand_box.click()
+ok(all(_SI.is_stand_in(g) for g in entry.instances) and entry.sample.material == _SI.PAINT,
+   "the Stand-in box marks every placement of the component")
+panel.edit_current()
+ok(vp.edited is entry.sample, "Edit opens the component's group for editing")
+from PySide6.QtWidgets import QInputDialog
+QInputDialog.getItem = staticmethod(lambda *a, **k: ("Other  (1×)", True))
+panel.replace_all()
+ok(win.replaced[1] is scene.groups[0] and len(win.replaced[0]) == len(entry.instances)
+   and not any(_SI.is_stand_in(g) for g in entry.instances),
+   "Replace all selects every placement, clears the stand-ins, then replaces")
+panel.stand_box.click(); panel.stand_box.click()
+ok(not any(_SI.is_stand_in(g) for g in entry.instances), "ticking it again clears them")
 panel.tabs.setCurrentIndex(1); panel.refresh_catalog()
 ok(panel.cat_list.count() == 3 and panel.folder_box.count() == 3, "panel lists every folder's models")
 panel.folder_box.setCurrentIndex(panel.folder_box.findData(str(lib)))

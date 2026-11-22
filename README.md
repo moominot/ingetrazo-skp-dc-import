@@ -26,6 +26,13 @@ components and export it back.
   -Z, +X, -X) with a quarter of the lumens each. Enscape has no colour for a light: they are
   white. The component is only the light's symbol: it stays in the drawing and Render Studio
   (0.17.0 or later) leaves it out of the render.
+- **Enscape library objects as stand-ins.** A plant, tree or chair from Enscape's online library
+  (Chaos Cosmos) is a component with an `Enscape.Asset` dictionary (`Id`, `Source = REMOTE`) and
+  only a light envelope of the real object inside the file. It comes in as a **stand-in**: the
+  envelope stays in the drawing, translucent, and the render leaves it out
+  (`ext["render_studio"]["hide_in_render"]`); the library Id is kept in `ext["enscape_asset"]`.
+  Swap it for a component of your own (Replace Component, or **Replace all…** in the Components
+  manager) or draw into it. The same property can be set on any component (below).
 - **Export SketchUp (.skp) with dynamic components…** writes the document as a `.skp`
   (SketchUp 2017 format, which every later SketchUp opens) with its groups, components,
   materials and textures, and each part's Dynamic Components data: the components work as
@@ -79,14 +86,23 @@ components and export it back.
   (Extensions ▸ Components manager settings…). Download into a watched folder — your Downloads
   folder, for instance — and the model is in the catalog, ready to drag onto the view.
 - **Online** — free CC0 assets from **Poly Haven** (polyhaven.com: HDRIs, materials, 3-D
-  models) and **ambientCG** (ambientcg.com: materials). **HDRIs** become Render Studio's 360°
+  models) and **ambientCG** (ambientcg.com: HDRIs and materials). The online assets have a tab each:
+  **360° backgrounds**, **Materials** and **Models**. **HDRIs** become Render Studio's 360°
   background; **materials** come with all their maps (colour, normal, roughness, AO,
   displacement, metal…) and load the paint bucket with the colour image at the material's real
   size, with a `<colour image>.pbr.json` manifest next to it naming the other maps for a
   renderer; **3-D models** (glTF) follow the cursor to be placed. Each source is reached only
   on its own servers, over https (redirects checked one by one); downloads are checked (MD5
   where the source gives it), kept in the extension's folder and reused. From an ambientCG zip
-  only the map images are taken out.
+  only the map images (or, for an HDRI, the full-range `.exr`) are taken out. A glTF model's
+  paints are registered under names that refer to the model («ArmChair_01», or «Model · Fabric»
+  when the model has several), and a model comes in as a component, so Replace Component keeps
+  its place.
+- **Stand-in** (a check box on In drawing, and in the right-click menu of any selection): the
+  component shows translucent in the drawing and the render leaves it out; clear it when the real
+  thing is there. **Replace all…** swaps every placement of the chosen component for another one
+  of the model (stand-ins are cleared first), **Edit** opens it for editing, **Select all** picks
+  every placement.
 - **As proxy** (a check box on My catalog and on Online's 3-D models): the model goes in as a
   light **envelope** in its place (its convex hull through some 64 of its outermost points, the
   gentle folds smooth; a rectangle for a flat model), and the full model is kept in an `.igz` of

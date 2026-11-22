@@ -57,7 +57,22 @@ def _from_scene(dst, temp, name):
         merge_materials(getattr(temp, "materials", {}) or {}, dst.materials, g)
         ensure_layers(dst, g)
         return g
-    return import_document_as_component(dst, temp, name)
+    comp = import_document_as_component(dst, temp, name)
+    return as_component(comp)
+
+
+def as_component(group):
+    """``group`` as a COMPONENT instance. A model file's single group (a glTF
+    from Poly Haven, say) comes out as a classic group: its mesh in world
+    coordinates and no axes of its own. Placed as it is, it is a group, and
+    Replace Component cannot tell where its origin is. An identity matrix
+    makes it an instance of itself (same geometry, the file's origin as the
+    component's origin)."""
+    if group is not None and getattr(group, "xform", None) is None:
+        from PySide6.QtGui import QMatrix4x4
+        group.xform = QMatrix4x4()
+        group.component = True
+    return group
 
 
 def group_from_file(viewport, path):
@@ -141,6 +156,11 @@ def read_file(viewport, path):
     elif suffix in (".gltf", ".glb"):
         from formats import glb
         glb.load_glb(temp, path, progress=scaled(cb, 0.0, 1.0, tr("Reading {name}…", name=path.name)))
+        try:
+            from . import gltf_names
+            gltf_names.name_materials(temp, path)       # paints named after the model
+        except Exception:  # noqa: BLE001 - names are a nicety: the model still comes in
+            _log.exception("could not name the materials of %s", path.name)
     else:
         raise ValueError(tr("{name}: not a model this panel can insert", name=path.name))
     end = getattr(viewport, "end_group_edit", None)

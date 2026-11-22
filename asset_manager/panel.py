@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QHBoxLayout, 
                                QPushButton, QStyle, QTabWidget, QToolButton, QVBoxLayout,
                                QWidget)
 
-from . import ambientcg, catalog, inventory, online, place, polyhaven, thumbs
+from . import ambientcg, catalog, inventory, online, online_tab, place, polyhaven, stand_in, thumbs
 from .i18n import tr, translate_on_show
 SOURCES = (polyhaven, ambientcg)
 NEW_MARK = "● "
@@ -131,6 +131,11 @@ class _CatalogSize:
         return 1.0, 1.0
 
 
+STAND_IN_TIP = ("A place-holder: it shows in the drawing, translucent, and the render leaves it out. "
+                "Swap it for a component of your own or draw into it; clear this when the real thing is there. "
+                "A face with a paint of its own keeps it.")
+
+
 class AssetPanel(QWidget):
     def __init__(self, app):
         super().__init__()
@@ -139,8 +144,6 @@ class AssetPanel(QWidget):
         self._thumb_cache: dict = {}
         self._dirty = True
         self._cat_items = None
-        self._ph_items: list = []
-        self._ph_kind = None
         self._sources: dict = {}
         self._known: set = set()
         self._new_paths: set = set()
@@ -166,7 +169,7 @@ class AssetPanel(QWidget):
 
         self._build_drawing_tab()
         self._build_catalog_tab()
-        self._build_polyhaven_tab()
+        self._build_online_tabs()
         self.tabs.currentChanged.connect(self._tab_shown)
 
         on_changed = getattr(app, "on_document_changed", None)
@@ -297,8 +300,10 @@ class AssetPanel(QWidget):
             self.refresh()
         elif index == 1 and self._cat_items is None:
             self.refresh_catalog()
-        elif index == 2 and self._ph_kind is None:
-            self._ph_load()
+        elif index >= 2:
+            tab = self.tabs.widget(index)
+            if getattr(tab, "loaded", 1) is None:
+                tab.load()
 
     # =========================================================================
     # In the drawing
@@ -311,11 +316,23 @@ class AssetPanel(QWidget):
         self.scene_list.provider = self._drawing_provider
         self.scene_list.itemDoubleClicked.connect(lambda _i: self.select_current())
         v.addWidget(self.scene_list, 1)
+        self.stand_box = QCheckBox("Stand-in: not rendered, shown translucent")
+        self.stand_box.setToolTip(tr(STAND_IN_TIP))
+        self.stand_box.setEnabled(False)
+        self.stand_box.clicked.connect(self._stand_in_clicked)
+        self.scene_list.currentItemChanged.connect(lambda *_a: self._sync_stand_box())
+        v.addWidget(self.stand_box)
         v.addLayout(_row(
             _button("Refresh", "List the components again", self.refresh),
             _button("Select all", "Select every placement of the chosen component", self.select_current),
             _button("Place copy", "A copy of the chosen component follows the cursor; "
                     "a click places it", self.place_copy)))
+        v.addLayout(_row(
+            _button("Replace all…", "Swap every placement of the chosen component for another "
+                    "component of the model (Replace Component); each keeps its place, turn and "
+                    "scale. Stand-ins are cleared first.", self.replace_all),
+            _button("Edit", "Open the chosen component to edit it: a change reaches every "
+                    "placement", self.edit_current)))
         self.summary = QLabel()
         v.addWidget(self.summary)
         self.tabs.addTab(page, "In drawing")
@@ -350,6 +367,30 @@ class AssetPanel(QWidget):
         dyn = sum(e.dynamic for e in self._entries)
         self.summary.setText(tr("{n} component, {d} dynamic", n=n, d=dyn) if n == 1
                                  else tr("{n} components, {d} dynamic", n=n, d=dyn))
+
+    def _sync_stand_box(self):
+        e = self._current_entry()
+        box = self.stand_box
+        box.blockSignals(True)
+        box.setEnabled(e is not None)
+        state = stand_in.state_of(e.instances) if e is not None else False
+        box.setTristate(state is None)
+        box.setCheckState(Qt.PartiallyChecked if state is None
+                          else Qt.Checked if state else Qt.Unchecked)
+        box.blockSignals(False)
+
+    def _stand_in_clicked(self, checked):
+        e = self._current_entry()
+        if e is not None:
+            self.stand_box.setTristate(False)
+            self.set_stand_in(list(e.instances), bool(checked))
+
+    def set_stand_in(self, groups, on):
+        """Mark ``groups`` as stand-ins (or not): one undo step."""
+        n = stand_in.set_stand_in(self._vp, groups, on)
+        self._say(tr("{n} marked as stand-in (not rendered, translucent).", n=n) if on and n
+                  else tr("{n} back to normal: they render.", n=n) if n else "")
+        self._sync_stand_box()
 
     def _current_entry(self):
         it = self.scene_list.currentItem()
@@ -387,6 +428,63 @@ class AssetPanel(QWidget):
             g = place.copy_of(e.sample)
             return g, place.origin_of(g)
         return build
+
+    def replace_all(self):
+        """Replace Component for every placement of the chosen component: the
+        window's own command, after the user picks the new one. Stand-ins are
+        cleared first (so the swapped-in component does not keep their
+        translucent paint) and put back when nothing was replaced."""
+        from PySide6.QtWidgets import QInputDialog
+        e = self._current_entry()
+        if e is None:
+            self._say(tr("Choose a component in the list first."))
+            return
+        window = self._app.window
+        needed = ("_replacement_choices", "replace_selection_with")
+        if not all(hasattr(window, n) for n in needed):
+            self._say(tr("This IngeTrazo has no Replace Component."))
+            return
+        here, _total = self.select_like(e.sample)
+        targets = [g for g in here if getattr(g, "is_component", None) and g.is_component()]
+        if not targets:
+            self._say(tr("Nothing to replace here: select the component's placements first."))
+            return
+        choices = window._replacement_choices(list(self._app.scene.selection))
+        if not choices:
+            self._say(tr("There is no other component in the model to replace it with."))
+            return
+        labels = [lb for lb, _g in choices]
+        label, ok = QInputDialog.getItem(
+            window, tr("Replace Component"),
+            tr("Replace {n} selected instances with:", n=len(targets)), labels, 0, False)
+        if not ok or label not in labels:
+            return
+        cleared = stand_in.set_stand_in(self._vp, targets, False)
+        done = 0
+        try:
+            done = window.replace_selection_with(choices[labels.index(label)][1])
+        finally:
+            if cleared and not done:
+                self._vp.history.undo()          # the stand-ins come back
+                self._vp.update()
+        self.refresh()
+
+    def edit_current(self):
+        """Edit the chosen component (the double-click's road): what is drawn
+        inside reaches every placement."""
+        e = self._current_entry()
+        if e is None:
+            self._say(tr("Choose a component in the list first."))
+            return
+        begin = getattr(self._vp, "begin_group_edit", None)
+        if not callable(begin):
+            self._say(tr("This IngeTrazo cannot edit a group from here."))
+            return
+        try:
+            begin(e.sample)
+        except Exception as exc:  # noqa: BLE001 - say it, never crash the app
+            _log.exception("could not edit the component")
+            self._say(tr("Could not edit it: {error}", error=exc))
 
     def place_copy(self):
         e = self._current_entry()
@@ -690,188 +788,23 @@ class AssetPanel(QWidget):
     # =========================================================================
     # Online: Poly Haven, ambientCG
     # =========================================================================
-    def _build_polyhaven_tab(self):
-        page = QWidget()
-        v = QVBoxLayout(page)
-        self.ph_source = QComboBox()
-        for mod in SOURCES:
-            self.ph_source.addItem(mod.LABEL, mod.KEY)
-        self.ph_source.setToolTip("Where the free assets come from")
-        self.ph_source.currentIndexChanged.connect(lambda _i: self._ph_source_changed())
-        self.ph_kind = QComboBox()
-        self.ph_kind.currentIndexChanged.connect(lambda _i: self._ph_load())
-        self.ph_res = QComboBox()
-        for r in polyhaven.RESOLUTIONS:
-            self.ph_res.addItem(r.upper(), r)
-        self.ph_res.setToolTip("Size of the images to download: 1K is light, 4K is sharp")
-        reload_ = QToolButton()
-        reload_.setText("↻")
-        reload_.setToolTip("Fetch the list again")
-        reload_.clicked.connect(lambda: self._ph_load(refresh=True))
-        v.addLayout(_row(self.ph_source, self.ph_kind, self.ph_res, reload_, stretch_first=True))
-        self.ph_search = QLineEdit()
-        self.ph_search.setPlaceholderText("Search (name, tag)…")
-        self.ph_search.setClearButtonEnabled(True)
-        self.ph_search.textChanged.connect(lambda _t: self._ph_filter())
-        self.ph_cat = QComboBox()
-        self.ph_cat.setMinimumContentsLength(14)
-        self.ph_cat.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
-        self.ph_cat.currentIndexChanged.connect(lambda _i: self._ph_filter())
-        v.addLayout(_row(self.ph_search, self.ph_cat, stretch_first=True))
-        self.ph_list = DragList(self.drop, icon=PH_ICON, grid=True)
-        self.ph_list.provider = self._ph_provider
-        self.ph_list.refused = lambda it: self._ph_use(it)
-        self.ph_list.icon_loader = self._ph_icon
-        self.ph_list.itemDoubleClicked.connect(self._ph_use)
-        self.ph_list.currentItemChanged.connect(lambda *_a: self._ph_selected())
-        v.addWidget(self.ph_list, 1)
-        self.ph_action = _button("Use", "", lambda: self._ph_use(self.ph_list.currentItem()))
-        web = _button("Web page", "Open the asset's page on its site", self._ph_web)
-        self.ph_proxy = self._proxy_box()
-        v.addLayout(_row(self.ph_action, self.ph_proxy, web, stretch_first=True))
-        self.ph_credit = QLabel()
-        self.ph_credit.setOpenExternalLinks(True)
-        self.ph_credit.setWordWrap(True)
-        v.addWidget(self.ph_credit)
-        self.tabs.addTab(page, "Online")
-        self._ph_source_changed(load=False)
+    def _build_online_tabs(self):
+        """One tab per kind of free online asset: 360° backgrounds, materials, models."""
+        self.online_tabs = {}
+        for kind, title in online_tab.TABS.items():
+            tab = online_tab.OnlineTab(self, kind, SOURCES, DragList, PH_ICON, _row, _button, ORIGIN)
+            self.online_tabs[kind] = tab
+            self.tabs.addTab(tab, title)
 
-    def _source(self):
-        key = self.ph_source.currentData()
+    def source_for(self, key):
         src = self._sources.get(key)
         if src is None:
             mod = next(m for m in SOURCES if m.KEY == key)
             src = self._sources[key] = mod.Source(self)
         return src
 
-    def _ph_source_changed(self, load=True):
-        mod = next(m for m in SOURCES if m.KEY == self.ph_source.currentData())
-        self.ph_kind.blockSignals(True)
-        keep = self.ph_kind.currentData()
-        self.ph_kind.clear()
-        for label, kind in mod.KINDS:
-            self.ph_kind.addItem(tr(label), kind)
-        self.ph_kind.setCurrentIndex(max(0, self.ph_kind.findData(keep)))
-        self.ph_kind.blockSignals(False)
-        self.ph_credit.setText(tr(mod.CREDIT) + " " + tr("Downloads are kept and reused."))
-        if load:
-            self._ph_load()
-        else:
-            self._ph_selected()
-
-    def _ph_load(self, refresh=False):
-        src, kind = self._source(), self.ph_kind.currentData()
-        self._ph_kind = (src.key, kind)
-        self.ph_list.clear()
-        for s in self._sources.values():
-            s.forget_thumbs()
-        self._say(tr("Getting the list from {source}…", source=src.label))
-
-        def got(items, err):
-            if self._ph_kind != (src.key, kind):
-                return
-            if err and not items:
-                self._say(tr("Could not get the list from {source}: {error}", source=src.label, error=err))
-                return
-            self._ph_items = items
-            self.ph_cat.blockSignals(True)
-            self.ph_cat.clear()
-            self.ph_cat.addItem(tr("All categories"), "")
-            for c in polyhaven.categories(items):
-                self.ph_cat.addItem(c, c)
-            self.ph_cat.blockSignals(False)
-            self._say("")
-            self._ph_filter()
-
-        src.listing(kind, got, refresh=refresh)
-        self._ph_selected()
-
-    def _ph_filter(self):
-        text, cat = self.ph_search.text(), self.ph_cat.currentData() or ""
-        self._source().forget_thumbs()
-        self.ph_list.clear()
-        blank = QPixmap(PH_ICON, PH_ICON)
-        blank.fill(Qt.transparent)
-        blank_icon = QIcon(blank)
-        n = 0
-        for e in self._ph_items:
-            if not polyhaven.matches(e, text, cat):
-                continue
-            it = QListWidgetItem(blank_icon, e["name"])
-            it.setData(Qt.UserRole, e)
-            it.setToolTip(f"{e['name']}\n{', '.join(e['categories'][:6])}")
-            self.ph_list.addItem(it)
-            n += 1
-        self.ph_list.schedule_icons()
-        self._say(f"{n} of {len(self._ph_items)}")
-
-    def _ph_icon(self, it):
-        e = it.data(Qt.UserRole)
-
-        def done(path, it=it):
-            try:
-                pm = QPixmap(str(path))
-                if not pm.isNull():
-                    it.setIcon(QIcon(pm.scaled(PH_ICON, PH_ICON, Qt.KeepAspectRatio,
-                                               Qt.SmoothTransformation)))
-            except RuntimeError:            # the item was cleared meanwhile
-                pass
-
-        self._source().thumbnail(e, done)
-
-    def _ph_selected(self):
-        kind = self.ph_kind.currentData()
-        text, tip = {
-            "hdris": ("Use as 360° background", "Download it and set it as Render Studio's "
-                      "360° background"),
-            "materials": ("Paint with it", "Download the material (colour, relief, roughness… "
-                          "maps) and load the paint bucket with it, at its real size"),
-            "models": ("Place", "Download it; it follows the cursor and a click places it "
-                       "(once downloaded it can also be dragged onto the view)"),
-        }.get(kind, ("Use", ""))
-        self.ph_action.setText(text)
-        self.ph_action.setToolTip(tip)
-        self.ph_proxy.setVisible(kind == "models")
-
-    def _ph_web(self):
-        it = self.ph_list.currentItem()
-        if it is not None:
-            QDesktopServices.openUrl(QUrl(self._source().site(it.data(Qt.UserRole))))
-
-    def _ph_provider(self, it):
-        """Only models that are already downloaded can be dragged."""
-        e = it.data(Qt.UserRole)
-        if self.ph_kind.currentData() != "models":
-            return None
-        main = self._source().cached("models", e, self.ph_res.currentData())
-        if main is None:
-            return None
-        return place.from_file(lambda: (self._model_group(main, interactive=False), ORIGIN))
-
-    def _ph_use(self, it):
-        if it is None:
-            self._say(tr("Choose an asset in the list first."))
-            return
-        e = it.data(Qt.UserRole)
-        src = self._source()
-        kind, res = self.ph_kind.currentData(), self.ph_res.currentData()
-        self._say(tr("Downloading «{name}» ({res})…", name=e["name"], res=res.upper()))
-
-        def progress(i, n):
-            self._say(tr("Downloading «{name}» ({res})… {i}/{n}", name=e["name"], res=res.upper(), i=i, n=n))
-
-        def done(path, err):
-            if path is None:
-                self._say(tr("Could not download «{name}»: {error}", name=e["name"], error=err))
-                return
-            try:
-                {"hdris": self._use_hdri, "materials": self._paint_with,
-                 "models": self._place_model}[kind](path, e, src)
-            except Exception as exc:  # noqa: BLE001 - say it, never crash the app
-                _log.exception("could not use %s", path)
-                self._say(tr("Could not use «{name}»: {error}", name=e["name"], error=exc))
-
-        src.download(kind, e, res, done, progress)
+    def all_sources(self):
+        return list(self._sources.values())
 
     def _use_hdri(self, path, e, src=None):
         studio = next((w for w in QApplication.allWidgets()

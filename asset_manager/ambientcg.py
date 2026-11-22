@@ -20,9 +20,12 @@ LABEL = "ambientCG"
 API = "https://ambientcg.com/api/v2/full_json"
 SITE = "https://ambientcg.com/a/{id}"
 ZIP = "https://ambientcg.com/get?file={id}_{res}-JPG.zip"
-CREDIT = 'Free CC0 materials from <a href="https://ambientcg.com">ambientcg.com</a>.'
+HDRI_ZIP = "https://ambientcg.com/get?file={id}_{res}.zip"
+CREDIT = 'Free CC0 assets from <a href="https://ambientcg.com">ambientcg.com</a>.'
 HOSTS = ("ambientcg.com", "struffelproductions.com")
-KINDS = (("Materials", "materials"),)
+KINDS = (("HDRIs (360° backgrounds)", "hdris"), ("Materials", "materials"))
+#: The API's asset type of each kind.
+API_TYPE = {"hdris": "HDRI", "materials": "Material"}
 RESOLUTIONS = ("1k", "2k", "4k")
 PAGE = 500
 LISTING_MAX_AGE = 24 * 3600
@@ -55,11 +58,12 @@ def entry(a: dict) -> dict:
     }
 
 
-def entries(pages: list[dict]) -> list[dict]:
+def entries(pages: list[dict], kind: str = "materials") -> list[dict]:
+    want = API_TYPE.get(kind, "Material")
     out, seen = [], set()
     for page in pages:
         for a in page.get("foundAssets") or []:
-            if not isinstance(a, dict) or a.get("dataType") not in (None, "Material"):
+            if not isinstance(a, dict) or a.get("dataType") not in (None, want):
                 continue
             e = entry(a)
             if e["id"] and e["id"] not in seen:
@@ -117,8 +121,44 @@ def extract_maps(zip_path: Path, root: Path) -> dict:
     return maps
 
 
-def asset_dir(aid: str, res: str) -> Path:
-    return cache_root() / "materials" / online.safe_name(aid) / res
+#: The 360° image inside an HDRI's zip: the full-range one, never the
+#: tone-mapped preview, the Blender file or the USD.
+HDRI_FILES = ("_HDR.exr", ".hdr", ".exr")
+
+
+def pick_hdri(names) -> str | None:
+    """The zip member to use as the 360° background, or None."""
+    names = [str(n) for n in names]
+    for ending in HDRI_FILES:
+        for n in names:
+            if n.lower().endswith(ending.lower()) and "tonemapped" not in n.lower():
+                return n
+    return None
+
+
+def extract_hdri(zip_path: Path, root: Path) -> Path:
+    """Take the 360° image out of an HDRI's zip into ``root`` (just that file)."""
+    with zipfile.ZipFile(zip_path) as z:
+        infos = {i.filename: i for i in z.infolist() if not i.is_dir()}
+        if len(infos) > MAX_MEMBERS:
+            raise ValueError("the zip is not an HDRI")
+        member = pick_hdri(infos)
+        if member is None:
+            raise ValueError("no 360° image in the zip")
+        if infos[member].file_size > MAX_UNZIPPED:
+            raise ValueError("the image is too big")
+        target = online.safe_target(root, PurePosixPath(member.replace("\\", "/")).name)
+        with z.open(infos[member]) as src, open(target, "wb") as dst:
+            while True:
+                chunk = src.read(1 << 20)
+                if not chunk:
+                    break
+                dst.write(chunk)
+    return target
+
+
+def asset_dir(aid: str, res: str, kind: str = "materials") -> Path:
+    return cache_root() / kind / online.safe_name(aid) / res
 
 
 class Source:
@@ -134,11 +174,11 @@ class Source:
         return tile_size_m(e)
 
     def cached(self, kind, e, res):
-        return online.cached_main(asset_dir(e["id"], res))
+        return online.cached_main(asset_dir(e["id"], res, kind))
 
     def listing(self, kind: str, done, refresh: bool = False):
-        """Every material (the API pages 500 at a time); cached for a day."""
-        path = cache_root() / "materials.json"
+        """Every asset of ``kind`` (the API pages 500 at a time); cached for a day."""
+        path = cache_root() / f"{kind}.json"
         fresh = path.is_file() and time.time() - path.stat().st_mtime < LISTING_MAX_AGE
 
         def from_disk():
@@ -154,7 +194,7 @@ class Source:
         include = "previewData,displayData,tagData,dimensionsData"
 
         def fetch(offset):
-            self.client.get(f"{API}?type=Material&sort=Popular&limit={PAGE}&offset={offset}"
+            self.client.get(f"{API}?type={API_TYPE[kind]}&sort=Popular&limit={PAGE}&offset={offset}"
                             f"&include={include}", lambda d, err: got(offset, d, err))
 
         def got(offset, data, err):
@@ -162,12 +202,12 @@ class Source:
                 try:
                     done(from_disk(), "")
                 except (OSError, ValueError):
-                    done(entries(pages), err)
+                    done(entries(pages, kind), err)
                 return
             try:
                 page = json.loads(data.decode("utf-8"))
             except ValueError as exc:
-                done(entries(pages), f"unreadable listing: {exc}")
+                done(entries(pages, kind), f"unreadable listing: {exc}")
                 return
             pages.append(page)
             total = int(page.get("numberOfResults") or 0)
@@ -175,7 +215,7 @@ class Source:
             if got_n and offset + PAGE < total:
                 fetch(offset + PAGE)
                 return
-            items = entries(pages)
+            items = entries(pages, kind)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(items), encoding="utf-8")
             done(items, "")
@@ -191,7 +231,7 @@ class Source:
 
     def download(self, kind: str, e: dict, res: str, done, progress=None):
         aid = e["id"]
-        root = asset_dir(aid, res)
+        root = asset_dir(aid, res, kind)
         hit = online.cached_main(root)
         if hit is not None:
             done(hit, "")
@@ -202,6 +242,20 @@ class Source:
         def fetched(failed):
             if failed:
                 done(None, failed)
+                return
+            if kind == "hdris":
+                try:
+                    image = extract_hdri(zip_path, root)
+                    online.mark_complete(root, image)
+                except Exception as exc:  # noqa: BLE001
+                    done(None, f"could not read the HDRI: {exc}")
+                    return
+                finally:
+                    try:
+                        zip_path.unlink()
+                    except OSError:
+                        pass
+                done(image, "")
                 return
             try:
                 maps = extract_maps(zip_path, root)
@@ -217,5 +271,5 @@ class Source:
                     pass
             done(maps["color"], "")
 
-        url = ZIP.format(id=aid, res=res.upper())
+        url = (HDRI_ZIP if kind == "hdris" else ZIP).format(id=aid, res=res.upper())
         self.client.fetch_all([(zip_path, url, "", 0)], fetched, progress)

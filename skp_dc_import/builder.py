@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import enscape_lights, reader
+from . import enscape_assets, enscape_lights, reader
 
 KEY = "skp_dc_import"
 _MAX_DEPTH = 32
@@ -309,7 +309,7 @@ def build(scene, model, path, progress=None) -> dict:
     identity = QMatrix4x4()
     meshes: dict = {}
     report = {"placements": 0, "dynamic": 0, "definitions": set(),
-              "dynamic_roots": [], "faces": 0, "lights": 0,
+              "dynamic_roots": [], "faces": 0, "lights": 0, "stand_ins": 0,
               "scenes": scenes_added}
 
     total = max(1, len(defs) + 1)
@@ -331,6 +331,8 @@ def build(scene, model, path, progress=None) -> dict:
             so._soft_edge_segments(defn, identity, soft)
             so._loose_edge_segments(defn, identity, loose)
             mesh = _mesh_from(faces, soft, loose)
+            if enscape_assets.asset_of(defn) is not None:
+                enscape_assets.strip_paint(mesh)
             meshes[key] = mesh
             report["faces"] += len(mesh.faces)
         return mesh
@@ -376,6 +378,13 @@ def build(scene, model, path, progress=None) -> dict:
         if lights:
             group.ext = enscape_lights.with_lights(group.ext, lights)
             report["lights"] += len(lights)
+        asset = enscape_assets.asset_of(defn, inst)
+        if asset is not None:
+            # Enscape's library object: only its envelope is in the file. It
+            # stays as a translucent stand-in the render leaves out.
+            group.ext = enscape_assets.with_stand_in(group.ext, asset, group.material)
+            group.material = dict(enscape_assets.PAINT)
+            report["stand_ins"] += 1
         kids = [place(c, None, depth + 1, False)
                 for c in getattr(defn, "instances", []) or []]
         group.adopt([k for k in kids if k is not None])
