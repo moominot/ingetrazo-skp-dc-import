@@ -11,7 +11,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PREVIEW_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
-MODEL_SUFFIXES = (".igz", ".skp")
+MODEL_SUFFIXES = (".igz", ".skp", ".gltf", ".glb")
+HDRI_SUFFIXES = (".hdr", ".exr")
+MANIFEST_END = ".pbr.json"
+RSMAT = ".rsmat"                 # Render Studio's material file (JSON, pictures in a folder beside it)
+RSMAT_FORMAT = "render-studio-material"
+#: sub-folders of the extension's own folder where saved assets go
+SAVE_DIRS = {"materials": "Materials", "models": "Models", "hdris": "Backgrounds"}
 _SETTINGS_KEY = "asset_manager/folders"
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _SKP_HEAD = 512 * 1024           # the preview sits in the first bytes
@@ -25,23 +31,45 @@ class Item:
     folder: Path | None = None
     member: str | None = None       # inside a zip: the model's path there
     maps: dict | None = None        # a material: key -> file name (or zip member)
+    spec: dict | None = None        # a material kept with a manifest (.pbr.json): its content
+    scene_mat: object | None = None  # a material of the open drawing (core.materials.Material)
+
+    @property
+    def is_material(self) -> bool:
+        return bool(self.maps) or self.spec is not None or self.scene_mat is not None
+
+    @property
+    def type_key(self) -> str:
+        """``material``, ``background`` or ``model``: what the type filter tells apart."""
+        return "material" if self.is_material else "background" if self.is_hdri else "model"
+
+    @property
+    def is_hdri(self) -> bool:
+        return not self.is_material and self.path.suffix.lower() in HDRI_SUFFIXES
 
     @property
     def kind(self) -> str:
-        if self.maps:
+        if self.is_material:
             return "material"
+        if self.is_hdri:
+            return "background"
         return Path(self.member or self.path.name).suffix.lower().lstrip(".")
 
     @property
     def key(self) -> str:
         """Tells items apart (several can live in one zip or folder)."""
+        if self.scene_mat is not None:
+            return f"drawing::{self.name}"
+        if self.spec is not None:
+            return f"{self.path}::material"
         if self.maps:
             return f"{self.path}::{self.maps['color']}"
         return f"{self.path}::{self.member}" if self.member else str(self.path)
 
     @property
     def label(self) -> str:
-        where = " (zip)" if self.path.suffix.lower() == ".zip" else ""
+        where = (" (zip)" if self.path.suffix.lower() == ".zip" else
+                 " (drawing)" if self.scene_mat is not None else "")
         return f"{self.name}  ·  {self.kind}{where}"
 
 
@@ -244,9 +272,80 @@ def _zip_items(p: Path, root: Path) -> list[Item]:
     return out
 
 
+def read_spec(path: Path) -> dict | None:
+    """The content of a material manifest, or None when it is not one."""
+    import json
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not (data.get("color") or data.get("rgb")):
+        return None
+    return data
+
+
+def read_rsmat(path: Path) -> dict | None:
+    """A Render Studio ``.rsmat`` as a material spec (colour, picture,
+    size, translucency, finish), or None when it is not one. The picture's
+    path is relative to the file's folder."""
+    import json
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("format") != RSMAT_FORMAT:
+        return None
+    tex = data.get("texture") if isinstance(data.get("texture"), dict) else {}
+    spec = {"name": data.get("name") or Path(path).stem, "source": "rsmat"}
+    if isinstance(data.get("color"), (list, tuple)) and len(data["color"]) >= 3:
+        spec["rgb"] = [float(c) for c in data["color"][:3]]
+    if tex.get("path"):
+        spec["color"] = str(tex["path"]).replace("\\", "/")
+        spec["size_m"] = [float(tex.get("sw") or 1.0), float(tex.get("sh") or 1.0)]
+    if data.get("opacity") is not None:
+        spec["opacity"] = float(data["opacity"])
+    if data.get("finish"):
+        spec["finish"] = str(data["finish"])
+    return spec if (spec.get("color") or spec.get("rgb")) else None
+
+
+def _manifest_items(d: Path, files, root: Path) -> tuple[list[Item], set]:
+    """The materials the ``.pbr.json`` manifests of folder ``d`` describe,
+    and the image names they use (so the loose-image reader skips them)."""
+    from .online import MAP_KEYS
+    items, used = [], set()
+    for fn in files:
+        low = fn.lower()
+        if low.endswith(RSMAT):
+            spec = read_rsmat(d / fn)
+        elif low.endswith(MANIFEST_END):
+            spec = read_spec(d / fn)
+        else:
+            continue
+        if spec is None:
+            continue
+        maps = {}
+        if spec.get("color"):
+            maps["color"] = str(spec["color"])
+            for key in MAP_KEYS[1:]:
+                if isinstance(spec.get(key), str):
+                    maps[key] = spec[key]
+            if not (d / maps["color"]).is_file():
+                continue
+        used |= {m.replace("\\", "/") for m in maps.values()}
+        name = str(spec.get("name") or "").strip() or fn.rsplit(".", 1)[0]
+        color = d / maps["color"] if maps else None
+        if color is None and isinstance(spec.get("preview"), str) and (d / spec["preview"]).is_file():
+            color = d / spec["preview"]          # a plain colour: the picture saved with it
+            used.add(spec["preview"])
+        items.append(Item(name, d / fn, color, root, maps=maps or None, spec=spec))
+    return items, used
+
+
 def scan(folder: Path | None = None) -> list[Item]:
-    """The models and material sets under ``folder`` (subfolders and zips
-    included), by name; with no folder, those of every catalog folder."""
+    """The models, backgrounds and material sets under ``folder``
+    (subfolders and zips included), by name; with no folder, those of every
+    catalog folder."""
     from . import materials
     roots = [Path(folder)] if folder else folders()
     items = []
@@ -254,19 +353,31 @@ def scan(folder: Path | None = None) -> list[Item]:
         if not root.is_dir():
             continue
         found = []
+        model_dirs: set = set()
         for dirpath, _dirs, files in os.walk(root):
             d = Path(dirpath)
+            if any(fn.lower().endswith((".gltf", ".glb")) for fn in files):
+                model_dirs.add(d)
+            # a model's textures (in its folder or below) are not materials
+            has_model = d in model_dirs or any(q in model_dirs for q in d.parents)
+            saved, used = _manifest_items(d, files, root)
+            found += saved
+            images = [fn for fn in files if fn.lower().endswith(materials.IMAGE_SUFFIXES)
+                      and fn not in used]
+            loose = [] if has_model else materials.find_sets(images)
+            in_sets = {n for m in loose for n in m.values()}
             for fn in files:
                 p = d / fn
                 suffix = p.suffix.lower()
-                if suffix in MODEL_SUFFIXES:
+                if suffix in MODEL_SUFFIXES or suffix in HDRI_SUFFIXES:
+                    if suffix in HDRI_SUFFIXES and (fn in used or fn in in_sets or has_model):
+                        continue
                     prev = next((p.with_suffix(s) for s in PREVIEW_SUFFIXES
                                  if p.with_suffix(s).is_file()), None)
                     found.append(Item(p.stem, p, prev, root))
                 elif suffix == ".zip":
                     found += _zip_items(p, root)
-            images = [fn for fn in files if fn.lower().endswith(materials.IMAGE_SUFFIXES)]
-            for maps in materials.find_sets(images):
+            for maps in loose:
                 color = d / maps["color"]
                 found.append(Item(materials.set_name(maps["color"], d.name), color, color,
                                   root, maps=maps))
@@ -291,7 +402,7 @@ def preview_bytes(item: Item) -> bytes | None:
         if item.path.suffix.lower() == ".zip":
             return read_member(item.path, item.maps["color"], 40 * 1024 * 1024)
         try:
-            return Path(item.path).read_bytes()
+            return (Path(item.path).parent / item.maps["color"]).read_bytes()
         except OSError:
             return None
     if item.kind == "skp":
@@ -326,6 +437,8 @@ def material_files(item: Item) -> tuple[Path, dict]:
     import hashlib
 
     from . import online
+    if not item.maps:
+        raise ValueError("a plain colour has no files")
     src_tag = f"{item.path}|{item.maps['color']}|{item.path.stat().st_mtime}"
     tag = hashlib.sha1(src_tag.encode()).hexdigest()[:10]
     out_dir = home() / "materials" / f"{online.safe_name(item.name)}_{tag}"
@@ -346,8 +459,20 @@ def material_files(item: Item) -> tuple[Path, dict]:
             target.write_bytes(data)
         paths[key] = target
     color = paths["color"]
-    online.write_manifest(color, paths, (1.0, 1.0), "catalog", item.name)
+    online.write_manifest(color, paths, material_size(item), "catalog", item.name)
     return color, paths
+
+
+def material_size(item: Item) -> tuple[float, float]:
+    """The real size in metres a catalog material was saved with (1 × 1 m
+    when it does not say)."""
+    try:
+        w, h = (float(v) for v in (item.spec or {}).get("size_m") or ())
+        if w > 0 and h > 0:
+            return w, h
+    except (TypeError, ValueError):
+        pass
+    return 1.0, 1.0
 
 
 def _png_in(head: bytes) -> bytes | None:
@@ -372,3 +497,121 @@ def skp_preview(path) -> bytes | None:
     if j < 0:
         return None
     return head[i:j + 8]          # IEND + its CRC
+
+
+# --- saving into the catalog ---------------------------------------------------
+def _target_dir(kind: str, name: str) -> Path:
+    from .online import safe_name
+    return default_folder() / SAVE_DIRS[kind] / safe_name(name)
+
+
+def _copy_into(src: Path, dst_dir: Path, rel: str | None = None) -> Path:
+    import shutil
+    dst = dst_dir / (rel or src.name)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return dst
+
+
+def _copy_preview(preview, dst_dir: Path, stem: str) -> None:
+    """A preview image next to the saved file (same name, .png/.jpg)."""
+    if preview and Path(preview).is_file():
+        suffix = Path(preview).suffix.lower()
+        if suffix in PREVIEW_SUFFIXES:
+            _copy_into(Path(preview), dst_dir, stem + suffix)
+
+
+def save_material(name: str, color_path=None, maps=None, size_m=(1.0, 1.0), rgb=None,
+                  opacity=None, finish=None, source: str = "drawing", aid: str = "",
+                  preview_png: bytes | None = None):
+    """Keep a material in the catalog: a folder of its own with the images
+    (``color_path`` and the other ``maps`` {key: path}) and a ``.pbr.json``
+    manifest that also holds a plain colour (``rgb``), translucency and
+    finish. Returns ``(manifest path, True)``, or ``(path, False)`` when a
+    material of that name is already there."""
+    import json
+
+    from .online import MAP_KEYS, safe_name
+    if not color_path and rgb is None:
+        raise ValueError("the material has neither a colour nor an image")
+    out_dir = _target_dir("materials", name)
+    manifest = out_dir / (safe_name(name) + MANIFEST_END)
+    if manifest.is_file():
+        return manifest, False
+    out_dir.mkdir(parents=True, exist_ok=True)
+    data: dict = {"version": 1, "name": name}
+    if color_path:
+        data["color"] = _copy_into(Path(color_path), out_dir).name
+        for key in MAP_KEYS[1:]:
+            p = (maps or {}).get(key)
+            if p and Path(p).is_file():
+                data[key] = _copy_into(Path(p), out_dir).name
+    if rgb is not None:
+        data["rgb"] = [float(c) for c in rgb[:3]]
+    if not color_path and preview_png:           # a plain colour: a simple picture of it
+        (out_dir / (safe_name(name) + ".png")).write_bytes(preview_png)
+        data["preview"] = safe_name(name) + ".png"
+    if opacity is not None:
+        data["opacity"] = float(opacity)
+    if finish:
+        data["finish"] = finish
+    data["size_m"] = [float(size_m[0]), float(size_m[1])]
+    data["source"] = source
+    data["id"] = aid or name
+    manifest.write_text(json.dumps(data, indent=1), encoding="utf-8")
+    return manifest, True
+
+
+def save_scene_material(mat, make_preview=None):
+    """A material of the drawing (``core.materials.Material``) into the
+    catalog; a plain colour gets the picture ``make_preview(color, opacity,
+    finish)`` returns (PNG bytes). Returns ``(manifest, newly saved)``."""
+    from . import online
+    tex = getattr(mat, "texture", None) or {}
+    path = tex.get("path")
+    color_path = Path(path) if path and Path(path).is_file() else None
+    maps = {}
+    if color_path is not None:
+        man = online.read_manifest(color_path) or {}
+        for key in online.MAP_KEYS[1:]:
+            if isinstance(man.get(key), str):
+                maps[key] = color_path.parent / man[key]
+    size = (float(tex.get("sw") or 1.0), float(tex.get("sh") or 1.0))
+    rgb, opacity, finish = (getattr(mat, "color", None), getattr(mat, "opacity", None),
+                            getattr(mat, "finish", None))
+    png = None
+    if color_path is None and make_preview is not None:
+        try:
+            png = make_preview(rgb, opacity, finish)
+        except Exception:  # noqa: BLE001 - a preview is a nicety
+            png = None
+    return save_material(mat.name, color_path, maps, size, rgb=rgb, opacity=opacity,
+                         finish=finish, preview_png=png)
+
+
+def save_online(kind: str, name: str, main, size_m=(1.0, 1.0), source: str = "", aid: str = "",
+                preview=None):
+    """What was downloaded from an online library (``main``: the colour image
+    of a material, the model's .gltf, the background's image) into the
+    catalog. Returns ``(path of the saved item, newly saved)``."""
+    import shutil
+
+    from . import online
+    main = Path(main)
+    if kind == "materials":
+        man = online.read_manifest(main) or {}
+        maps = {k: main.parent / v for k, v in man.items()
+                if k in online.MAP_KEYS and isinstance(v, str)}
+        return save_material(name, main, maps, man.get("size_m") or size_m,
+                             source=source or "online", aid=aid)
+    out_dir = _target_dir(kind, name)
+    target = out_dir / main.name
+    if target.is_file():
+        return target, False
+    if kind == "models":                # the .gltf with the files it refers to
+        shutil.copytree(main.parent, out_dir, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns(".complete"))
+    else:
+        _copy_into(main, out_dir)
+    _copy_preview(preview, out_dir, main.stem)
+    return target, True

@@ -198,6 +198,9 @@ class Source:
 
         self.client.get(f"{API}/assets?t={api_type}", got)
 
+    def thumb_path(self, e):
+        return cache_root() / "thumbs" / f"{online.safe_name(e['id'])}.png"
+
     def thumbnail(self, e, done):
         path = cache_root() / "thumbs" / f"{online.safe_name(e['id'])}.png"
         self.client.thumbnail(KEY + e["id"], e.get("thumb") or THUMB.format(id=e["id"]), path, done)

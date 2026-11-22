@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The Components tray tab: what the drawing holds, the user's catalog
+"""The Library tray tab: what the drawing holds, the user's catalog
 folders, and Poly Haven's free HDRIs, materials and models."""
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 
 from PySide6.QtCore import QMimeData, QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QDrag, QIcon, QPixmap, QVector3D
+from PySide6.QtGui import QColor, QDesktopServices, QDrag, QIcon, QPixmap, QVector3D
 from PySide6.QtCore import QFileSystemWatcher
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QHBoxLayout, QLabel,
@@ -15,10 +15,12 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QHBoxLayout, 
                                QPushButton, QStyle, QTabWidget, QToolButton, QVBoxLayout,
                                QWidget)
 
-from . import ambientcg, catalog, inventory, online, online_tab, place, polyhaven, stand_in, thumbs
+from . import (ambientcg, catalog, inventory, online, online_tab, place, polyhaven, previews,
+               stand_in, thumbs)
 from .i18n import tr, translate_on_show
 SOURCES = (polyhaven, ambientcg)
 NEW_MARK = "● "
+DRAWING = "@drawing"      # the folder box's entry for the drawing's own materials
 
 _log = logging.getLogger(__name__)
 ICON = 64
@@ -122,13 +124,22 @@ def _button(text, tip, fn):
     return b
 
 
-class _CatalogSize:
-    """A catalog material does not say its real size: 1 × 1 m, which the
-    materials tray can change."""
+class _Size:
+    """The real size in metres a material is painted at (a catalog material
+    keeps the one it was saved with, 1 × 1 m when it says none; the
+    materials tray can change it)."""
 
-    @staticmethod
-    def tile_size_m(_e):
-        return 1.0, 1.0
+    def __init__(self, w=1.0, h=1.0):
+        self.w, self.h = w, h
+
+    def tile_size_m(self, _e):
+        return self.w, self.h
+
+
+def _swatch(rgb, size=PH_ICON) -> QIcon:
+    pm = QPixmap(size, size)
+    pm.fill(QColor.fromRgbF(*[max(0.0, min(1.0, float(c))) for c in tuple(rgb)[:3]]))
+    return QIcon(pm)
 
 
 STAND_IN_TIP = ("A place-holder: it shows in the drawing, translucent, and the render leaves it out. "
@@ -298,8 +309,11 @@ class AssetPanel(QWidget):
     def _tab_shown(self, index):
         if index == 0 and self._dirty:
             self.refresh()
-        elif index == 1 and self._cat_items is None:
-            self.refresh_catalog()
+        elif index == 1:
+            if self._cat_items is None:
+                self.refresh_catalog()
+            else:
+                self._fill_catalog()            # the drawing's materials may have changed
         elif index >= 2:
             tab = self.tabs.widget(index)
             if getattr(tab, "loaded", 1) is None:
@@ -520,7 +534,13 @@ class AssetPanel(QWidget):
         self.cat_search.setPlaceholderText("Search by name…")
         self.cat_search.setClearButtonEnabled(True)
         self.cat_search.textChanged.connect(lambda _t: self._fill_catalog())
-        v.addWidget(self.cat_search)
+        self.cat_type = QComboBox()
+        self.cat_type.setToolTip("Show only one kind of thing")
+        for label, key in ((tr("All types"), ""), (tr("Models"), "model"),
+                           (tr("Materials"), "material"), (tr("Backgrounds"), "background")):
+            self.cat_type.addItem(label, key)
+        self.cat_type.currentIndexChanged.connect(lambda _i: self._fill_catalog())
+        v.addLayout(_row(self.cat_search, self.cat_type, stretch_first=True))
         self.cat_list = DragList(self.drop)
         self.cat_list.setToolTip("Double-click or drag onto the view to insert")
         self.cat_list.provider = self._catalog_provider
@@ -539,10 +559,17 @@ class AssetPanel(QWidget):
         v.addLayout(_row(
             _button("Update", "Read the folders again (the watched ones update by themselves)",
                     self.refresh_catalog),
-            _button("Insert", "The chosen model follows the cursor; a click places it",
+            _button("Insert", "The chosen model follows the cursor, a click places it; a material "
+                    "loads the paint bucket; a background becomes the 360° background",
                     self.insert_current),
-            self._proxy_box(),
             self.site_btn))
+        v.addLayout(_row(
+            _button("Save to catalog", "Keep the chosen material «(drawing)» in your catalog "
+                    "(its image, or a simple picture of its colour, plus translucency and finish)",
+                    self.save_current_item),
+            _button("Save all", "Keep every material of the drawing that is not in the catalog yet",
+                    self.save_all_materials),
+            self._proxy_box()))
         self.cat_info = QLabel()
         self.cat_info.setWordWrap(True)
         v.addWidget(self.cat_info)
@@ -553,6 +580,7 @@ class AssetPanel(QWidget):
         self.folder_box.blockSignals(True)
         self.folder_box.clear()
         self.folder_box.addItem(tr("All folders"), "")
+        self.folder_box.addItem(tr("Materials of this drawing"), DRAWING)
         watched = catalog.watched()
         for i, f in enumerate(catalog.folders()):
             label = tr("Extension's own folder") if i == 0 else (f.name or str(f))
@@ -599,8 +627,19 @@ class AssetPanel(QWidget):
         shown = 0
         bold = QFont(self.cat_list.font())
         bold.setBold(True)
-        for item in self._cat_items:
-            if folder and str(item.folder) != folder:
+        kind = self.cat_type.currentData() or ""
+        saved = {i.name.lower() for i in self._cat_items if i.is_material}
+        pool = list(self._cat_items)
+        if folder in ("", DRAWING):         # the drawing's materials, but not the ones already kept
+            pool += [i for i in self._drawing_items() if folder == DRAWING or i.name.lower() not in saved]
+        if folder == DRAWING:
+            pool = [i for i in pool if i.scene_mat is not None]
+        pool.sort(key=lambda i: (i.name.lower(), i.key.lower()))
+        total = len(pool)
+        for item in pool:
+            if folder and folder != DRAWING and str(item.folder) != folder:
+                continue
+            if kind and item.type_key != kind:
                 continue
             if text and not all(w in item.name.lower() for w in text.split()):
                 continue
@@ -616,28 +655,54 @@ class AssetPanel(QWidget):
             shown += 1
         self.cat_list.schedule_icons()
         own = catalog.default_folder()
-        if not self._cat_items:
+        if not self._cat_items and not pool:
             self.cat_info.setText(tr("No models yet. Add a folder with «+», or put .igz/.skp files "
                                      "(and a .png with the same name as preview) in\n{folder}",
                                      folder=own))
         else:
-            mats = sum(1 for i in self._cat_items if i.maps)
-            self.cat_info.setText(tr("{shown} of {total} ({models} models, {mats} materials)",
-                                     shown=shown, total=len(self._cat_items),
-                                     models=len(self._cat_items) - mats, mats=mats))
+            mats = sum(1 for i in pool if i.is_material)
+            hdris = sum(1 for i in pool if i.is_hdri)
+            self.cat_info.setText(tr("{shown} of {total} ({models} models, {mats} materials, "
+                                     "{hdris} backgrounds)",
+                                     shown=shown, total=total,
+                                     models=total - mats - hdris, mats=mats, hdris=hdris))
 
     @staticmethod
     def _item_tip(item) -> str:
         where = str(item.path) + (f"\n› {item.member}" if item.member else "")
-        if item.maps:
-            return (f"{where}\nMaterial: {', '.join(sorted(item.maps))}\n"
+        if item.scene_mat is not None:
+            m = item.scene_mat
+            parts = [f"{item.name} (in this drawing, not in the catalog yet)"]
+            tex = getattr(m, "texture", None) or {}
+            parts.append(f"{tex.get('sw', 1):g} × {tex.get('sh', 1):g} m" if tex else "Plain colour")
+            if getattr(m, "opacity", None) is not None:
+                parts.append(f"Opacity {m.opacity:g}")
+            if getattr(m, "finish", None):
+                parts.append(f"Finish: {m.finish}")
+            return "\n".join(parts + ["Double-click or Insert: paint with it"])
+        if item.is_material:
+            what = ", ".join(sorted(item.maps)) if item.maps else "plain colour"
+            return (f"{where}\nMaterial: {what}\n"
                     "Double-click or Insert: paint with it")
+        if item.is_hdri:
+            return f"{where}\nDouble-click or Insert: use as the 360° background"
         return where
 
     def _catalog_icon(self, it):
         item = it.data(Qt.UserRole)
         pm = QPixmap()
-        if item.preview is not None and not item.maps:
+        plain = (item.spec is not None and not item.maps) or (
+            item.scene_mat is not None and not getattr(item.scene_mat, "texture", None))
+        if item.scene_mat is not None and not plain:
+            pm.load(str(item.path))                           # the drawing's picture
+        elif plain and (item.preview is None or not item.preview.is_file()):
+            src = item.scene_mat if item.scene_mat is not None else None
+            spec = item.spec or {}
+            pm = previews.render(getattr(src, "color", None) or spec.get("rgb"),
+                                 getattr(src, "opacity", None) if src is not None else spec.get("opacity"),
+                                 getattr(src, "finish", None) if src is not None else spec.get("finish"),
+                                 ICON)
+        elif item.preview is not None and not item.maps:
             pm.load(str(item.preview))
         if pm.isNull():
             data = catalog.preview_bytes(item)
@@ -757,8 +822,14 @@ class AssetPanel(QWidget):
             self._say(tr("Choose a model in the list first."))
             return
         item = it.data(Qt.UserRole)
-        if item.maps:
+        if item.scene_mat is not None:
+            self.paint_scene_material(item.scene_mat)
+            return
+        if item.is_material:
             self.paint_with_item(item)
+            return
+        if item.is_hdri:
+            self._use_hdri(item.path, {"name": item.name})
             return
         try:
             g = self._build_from(self._model_file(item))
@@ -768,22 +839,159 @@ class AssetPanel(QWidget):
             return
         self._place(g, ORIGIN)
 
+    def paint_scene_material(self, obj):
+        """A material of the drawing: the paint bucket takes it."""
+        try:
+            tex = obj.texture or {}
+            if tex.get("path"):
+                self._paint_with(tex["path"], {"name": obj.name},
+                                 _Size(float(tex.get("sw") or 1.0), float(tex.get("sh") or 1.0)))
+                self._stamp_recipe(obj.name, texture=True)
+            else:
+                self._paint_color(obj.color or (0.8, 0.8, 0.8), obj.name, obj.opacity, obj.finish)
+        except Exception as exc:  # noqa: BLE001 - say it, never crash the app
+            _log.exception("could not use %s", obj.name)
+            self._say(tr("Could not use {name}: {error}", name=obj.name, error=exc))
+
     def paint_with_item(self, item):
         """A material from the catalog: its maps copied to the extension's
         folder with a manifest, and the paint bucket loaded with it."""
         try:
-            color, _maps = catalog.material_files(item)
-            self._paint_with(color, {"name": item.name}, _CatalogSize)
+            spec = item.spec or {}
+            if item.scene_mat is not None:
+                self.paint_scene_material(item.scene_mat)
+            elif item.maps:
+                color, _maps = catalog.material_files(item)
+                self._paint_with(color, {"name": item.name}, _Size(*catalog.material_size(item)))
+                self._stamp_recipe(item.name, texture=True, opacity=spec.get("opacity"),
+                                   finish=spec.get("finish"))
+            else:
+                self._paint_color(spec.get("rgb") or (0.8, 0.8, 0.8), item.name,
+                                  spec.get("opacity"), spec.get("finish"))
         except Exception as exc:  # noqa: BLE001 - say it, never crash the app
             _log.exception("could not use %s", item.key)
             self._say(tr("Could not use {name}: {error}", name=item.name, error=exc))
 
     def _catalog_provider(self, it):
         item = it.data(Qt.UserRole)
-        if item.maps:
-            return None                     # a material is painted, not dragged
+        if item.is_material or item.is_hdri:
+            return None                     # a material is painted, a background is set
         return place.from_file(
             lambda: (self._model_group(self._model_file(item), interactive=False), ORIGIN))
+
+    # =========================================================================
+    # Materials of the drawing, listed in the catalog beside the saved ones
+    # =========================================================================
+    def _drawing_items(self):
+        """The drawing's materials as catalog items (not saved anywhere yet)."""
+        out = []
+        for m in getattr(self._app.scene, "materials", {}).values():
+            tex = getattr(m, "texture", None) or {}
+            path = Path(tex["path"]) if tex.get("path") else Path("drawing")
+            out.append(catalog.Item(m.name, path, None, None, scene_mat=m))
+        return out
+
+    def _after_catalog_save(self):
+        """The catalog holds something new: read it again where it is shown."""
+        if self._cat_items is not None:
+            self.refresh_catalog()
+
+    def save_current_item(self):
+        """«Save to catalog» for the chosen material of the drawing."""
+        it = self.cat_list.currentItem()
+        item = it.data(Qt.UserRole) if it is not None else None
+        if item is None or item.scene_mat is None:
+            self._say(tr("Choose a material «(drawing)» in the list first."))
+            return
+        self._save_scene_materials([item.scene_mat])
+
+    def save_all_materials(self):
+        self._save_scene_materials(list(getattr(self._app.scene, "materials", {}).values()))
+
+    def _save_scene_materials(self, mats):
+        new = have = 0
+        errors = []
+        for m in mats:
+            try:
+                _path, fresh = catalog.save_scene_material(m, previews.png_bytes)
+            except Exception as exc:  # noqa: BLE001 - say it, never crash the app
+                _log.exception("could not save %s", m.name)
+                errors.append(f"{m.name}: {exc}")
+                continue
+            new += fresh
+            have += not fresh
+        if new:
+            self._after_catalog_save()
+        msg = tr("{n} saved to the catalog ({folder}).", n=new, folder=catalog.default_folder() / "Materials")
+        if have:
+            msg += " " + tr("{n} already there.", n=have)
+        if errors:
+            msg += " " + tr("Could not save: {names}.", names="; ".join(errors[:3]))
+        self._say(msg)
+
+    def save_online(self, kind, e, path, src):
+        """What an online library gave (already downloaded to ``path``) into
+        the catalog."""
+        try:
+            _saved, fresh = catalog.save_online(kind, e["name"], path, src.tile_size_m(e), src.key,
+                                                e["id"], preview=src.thumb_path(e))
+        except Exception as exc:  # noqa: BLE001 - say it, never crash the app
+            _log.exception("could not save %s", e.get("id"))
+            self._say(tr("Could not save «{name}»: {error}", name=e["name"], error=exc))
+            return
+        if fresh:
+            self._after_catalog_save()
+            self._say(tr("«{name}» saved to the catalog.", name=e["name"]))
+        else:
+            self._say(tr("«{name}» is already in the catalog.", name=e["name"]))
+
+    # --- painting -------------------------------------------------------------------
+    def _materials_tray(self):
+        try:
+            from views.tray import MaterialsPanel
+            return next((w for w in QApplication.allWidgets() if isinstance(w, MaterialsPanel)), None)
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _stamp_recipe(self, name, texture=False, opacity=None, finish=None):
+        """The paint bucket's material keeps what the material was saved with
+        (translucency, finish) — the drawing's own entry when it has one."""
+        try:
+            from core.materials import Material
+            from tools.paint import PaintTool
+        except Exception:  # noqa: BLE001
+            return
+        have = self._app.scene.materials.get(name)
+        if have is not None:
+            PaintTool.current_material = have
+            PaintTool.current_opacity = have.opacity
+            return
+        mat = PaintTool.current_material
+        if mat is None:
+            return
+        mat.opacity = opacity
+        mat.finish = finish or mat.finish
+        PaintTool.current_opacity = opacity
+
+    def _paint_color(self, rgb, name, opacity=None, finish=None):
+        mats = self._materials_tray()
+        from core.materials import Material
+        from tools.paint import PaintTool
+        rgb = tuple(float(c) for c in rgb[:3])
+        if mats is not None and hasattr(mats, "_apply_color"):
+            mats._apply_color(rgb, name=name)
+        else:
+            PaintTool.current_is_default = False
+            PaintTool.current_color = rgb
+            PaintTool.current_texture = None
+            PaintTool.current_material = Material(name, color=rgb)
+            act = getattr(self._app.window, "_activate_tool", None)
+            if callable(act):
+                act("paint")
+        have = self._app.scene.materials.get(name)
+        PaintTool.current_material = have or Material(name, color=rgb, opacity=opacity, finish=finish)
+        PaintTool.current_opacity = PaintTool.current_material.opacity
+        self._say(tr("Paint bucket loaded with «{name}»: click the faces to paint.", name=name))
 
     # =========================================================================
     # Online: Poly Haven, ambientCG
@@ -827,11 +1035,7 @@ class AssetPanel(QWidget):
         sw, sh = (src or self._source()).tile_size_m(e)
         name = e["name"]
         win = self._app.window
-        try:
-            from views.tray import MaterialsPanel
-            mats = next((w for w in QApplication.allWidgets() if isinstance(w, MaterialsPanel)), None)
-        except Exception:  # noqa: BLE001
-            mats = None
+        mats = self._materials_tray()
         if mats is not None and hasattr(mats, "_apply_texture"):
             mats._apply_texture(str(path), sw=sw, sh=sh, name=name)
         else:

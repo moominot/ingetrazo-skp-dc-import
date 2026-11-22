@@ -23,7 +23,7 @@ _log = logging.getLogger(__name__)
 #: What each kind's tab is called.
 TABS = {
     "hdris": "360° backgrounds",
-    "materials": "Materials",
+    "materials": "Online materials",
     "models": "Models",
 }
 #: What each tab's main button says and does.
@@ -80,7 +80,10 @@ class OnlineTab(QWidget):
         text, tip = ACTIONS[kind]
         self.action = button(text, tip, lambda: self.use(self.list.currentItem()))
         web = button("Web page", "Open the asset's page on its site", self._web)
-        controls = [self.action]
+        save = button("Save to catalog", "Download it (if needed) and keep a copy in your catalog, "
+                      "so it is there offline and in every drawing",
+                      lambda: self.use(self.list.currentItem(), save=True))
+        controls = [self.action, save]
         self.proxy = None
         if kind == "models":
             self.proxy = panel._proxy_box()
@@ -182,7 +185,9 @@ class OnlineTab(QWidget):
             return None
         return place.from_file(lambda: (self.panel._model_group(main, interactive=False), self.origin))
 
-    def use(self, it):
+    def use(self, it, save=False):
+        """Download the asset and use it; with ``save``, keep it in the
+        catalog instead."""
         panel = self.panel
         if it is None:
             panel._say(tr("Choose an asset in the list first."))
@@ -200,6 +205,9 @@ class OnlineTab(QWidget):
                 panel._say(tr("Could not download «{name}»: {error}", name=e["name"], error=err))
                 return
             try:
+                if save:
+                    panel.save_online(kind, e, path, src)
+                    return
                 {"hdris": panel._use_hdri, "materials": panel._paint_with,
                  "models": panel._place_model}[kind](path, e, src)
             except Exception as exc:  # noqa: BLE001 - say it, never crash the app

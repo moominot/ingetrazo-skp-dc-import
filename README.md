@@ -8,7 +8,7 @@ install independently:
 |---|---|---|
 | **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
 | **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
-| **Components manager** | `asset_manager/` | A tray tab: the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models); heavy models as light **proxies** (an envelope in the drawing, the full model in an `.igz` of its own and in the render). |
+| **Library** | `asset_manager/` | A tray tab (named «Biblioteca» in Catalan): the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and the drawing's materials listed beside the catalog's (type filter; **Save to catalog** keeps them, with a simple picture for plain colours; Render Studio `.rsmat` files are read), and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models) that **Save to catalog** keeps offline; heavy models as light **proxies** (an envelope in the drawing, the full model in an `.igz` of its own and in the render). |
 
 None imports another. Installed together, you can import a `.skp`, edit its dynamic
 components and export it back.
@@ -61,7 +61,7 @@ components and export it back.
   its new size (copies, parts that keep their size, formulas) instead of stretched, in the
   same undo step as the scale; the result is the same as typing its LenX/LenY/LenZ.
 
-## Components manager (`asset_manager`)
+## Library (`asset_manager`)
 
 - **In drawing**: every component of the document once, with a preview and how many there are
   (the parts inside a dynamic component are not listed). **Select all** selects every instance

@@ -229,6 +229,9 @@ class Source:
 
         fetch(0)
 
+    def thumb_path(self, e):
+        return cache_root() / "thumbs" / f"{online.safe_name(e['id'])}.png"
+
     def thumbnail(self, e, done):
         path = cache_root() / "thumbs" / f"{online.safe_name(e['id'])}.png"
         self.client.thumbnail(KEY + e["id"], e.get("thumb", ""), path, done)
