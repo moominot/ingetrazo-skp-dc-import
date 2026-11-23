@@ -17,23 +17,31 @@ from __future__ import annotations
 from urllib.parse import quote
 
 KEY = "skp_dc_import"
+from .options import _natural
+
 DELETE = object()                 # a key change that removes the key
 
 #: SketchUp's predefined attributes, in the order its «Add attribute» menu
 #: lists them, with the units they are measured in.
-PREDEFINED = (
-    ("x", "LENGTH"), ("y", "LENGTH"), ("z", "LENGTH"),
-    ("lenx", "LENGTH"), ("leny", "LENGTH"), ("lenz", "LENGTH"),
-    ("rotx", "DEGREES"), ("roty", "DEGREES"), ("rotz", "DEGREES"),
-    ("hidden", "BOOLEAN"), ("material", "STRING"), ("copies", "INTEGER"),
-    ("name", "STRING"), ("summary", "STRING"), ("description", "STRING"),
-    ("itemcode", "STRING"),
+GROUPS = (
+    ("Component Info", (("name", "STRING"), ("summary", "STRING"),
+                        ("description", "STRING"), ("itemcode", "STRING"))),
+    ("Position", (("x", "LENGTH"), ("y", "LENGTH"), ("z", "LENGTH"))),
+    ("Size", (("lenx", "LENGTH"), ("leny", "LENGTH"), ("lenz", "LENGTH"))),
+    ("Rotation", (("rotx", "DEGREES"), ("roty", "DEGREES"), ("rotz", "DEGREES"))),
+    ("Behaviors", (("material", "STRING"), ("scaletool", "STRING"), ("hidden", "BOOLEAN"),
+                   ("onclick", "STRING"), ("copies", "INTEGER"))),
+    ("Form Design", (("imageurl", "STRING"), ("dialogwidth", "FLOAT"),
+                     ("dialogheight", "FLOAT"))),
 )
+PREDEFINED = tuple(item for _title, items in GROUPS for item in items)
 PREDEFINED_NAMES = tuple(n for n, _ in PREDEFINED)
 LABELS = {"x": "X", "y": "Y", "z": "Z", "lenx": "LenX", "leny": "LenY", "lenz": "LenZ",
           "rotx": "RotX", "roty": "RotY", "rotz": "RotZ", "hidden": "Hidden",
           "material": "Material", "copies": "Copies", "name": "Name",
-          "summary": "Summary", "description": "Description", "itemcode": "ItemCode"}
+          "summary": "Summary", "description": "Description", "itemcode": "ItemCode",
+          "scaletool": "ScaleTool", "onclick": "onClick", "imageurl": "ImageURL",
+          "dialogwidth": "DialogWidth", "dialogheight": "DialogHeight"}
 ACCESS = ("NONE", "VIEW", "TEXTBOX", "LIST")
 META = ("formula", "label", "access", "formlabel", "options", "units", "formulaunits", "error")
 
@@ -76,7 +84,7 @@ def attribute_names(attrs: dict) -> list:
             present.add(k)
     present = {n for n in present if n and not n.startswith("_") and not n.startswith("inst_")}
     pre = [n for n in PREDEFINED_NAMES if n in present]
-    own = sorted(n for n in present if n not in PREDEFINED_NAMES)
+    own = sorted((n for n in present if n not in PREDEFINED_NAMES), key=_natural)
     return pre + own
 
 

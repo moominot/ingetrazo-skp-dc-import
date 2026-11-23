@@ -7,6 +7,7 @@ Pure Python, no Qt: the panel (``ui.py``) only draws what this returns.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from urllib.parse import unquote, unquote_to_bytes
 
@@ -57,9 +58,36 @@ def option_units(attrs: dict, name: str) -> str:
     return u or "STRING"
 
 
+# The order of SketchUp's «add attribute» list: the predefined attributes
+# first, in these groups; every custom one after them, alphanumerically.
+PREDEFINED_ORDER = (
+    "name", "summary", "description", "itemcode",            # Component Info
+    "x", "y", "z",                                           # Position
+    "lenx", "leny", "lenz",                                  # Size
+    "rotx", "roty", "rotz",                                  # Rotation
+    "material", "scaletool", "hidden", "onclick", "copies",  # Behaviors
+    "imageurl", "dialogwidth", "dialogheight",               # Form Design
+)
+
+
+def _natural(text: str) -> list:
+    """«b2» before «b10»: digits compare as numbers, case is ignored."""
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", text.lower())]
+
+
+def option_sort_key(name: str) -> tuple:
+    n = name.lower()
+    if n in PREDEFINED_ORDER:
+        return (0, PREDEFINED_ORDER.index(n), [])
+    return (1, 0, _natural(name))
+
+
 def options_of(attrs: dict) -> list:
-    """The root's user-facing options, in SketchUp's order (by attribute
-    name: authors prefix them «a_», «b_» to sort them)."""
+    """The root's user-facing options, in SketchUp's order: the predefined
+    attributes (Name, Summary, Description, ItemCode, X…, LenX…, RotX…,
+    Material, ScaleTool, Hidden, onClick, Copies, ImageURL…) as its list
+    shows them, then the custom ones alphanumerically (authors prefix them
+    «a_», «b_» to sort them)."""
     out = []
     for key in sorted(attrs):
         if not (key.startswith("_") and key.endswith("_access")) or key.startswith("_inst_"):
@@ -74,6 +102,7 @@ def options_of(attrs: dict) -> list:
         out.append(Option(name, str(label), access, option_units(attrs, name),
                           attrs.get(name), parse_choices(attrs.get(f"_{name}_options"))
                           if access == "LIST" else []))
+    out.sort(key=lambda o: option_sort_key(o.name))
     return out
 
 

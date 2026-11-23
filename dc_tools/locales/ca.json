@@ -118,5 +118,20 @@
 "The name of the material the part is painted with.": "El nom del material amb què està pintada la peça.",
 "How many <b>extra</b> copies of the part to make (Copies = 3 gives four parts in all). Inside a formula, <code>copy</code> is the number of the part being drawn: 0 for the original, 1, 2, 3… for the copies; use it to place each copy, e.g. <code>Z = (copy+1)*parent!lenz/parent!n</code>.": "Quantes còpies <b>addicionals</b> de la peça s'han de fer (Copies = 3 dona quatre peces en total). Dins d'una fórmula, <code>copy</code> és el número de la peça que es dibuixa: 0 per a l'original, 1, 2, 3… per a les còpies; usa'l per col·locar cada còpia, p. ex. <code>Z = (copy+1)*parent!lenz/parent!n</code>.",
 "The part's name. It is what other formulas use to refer to it (<code>Shelf!lenx</code>).": "El nom de la peça. És el que fan servir les altres fórmules per referir-s'hi (<code>Shelf!lenx</code>).",
-"Free text kept with the component (for lists, reports…). They do not change its shape.": "Text lliure que es desa amb el component (per a llistats, informes…). No en canvia la forma."
+"Free text kept with the component (for lists, reports…). They do not change its shape.": "Text lliure que es desa amb el component (per a llistats, informes…). No en canvia la forma.",
+"Scale handles": "Nanses d'escala",
+"Scale along red. (X)": "Escala al llarg del vermell. (X)",
+"Scale along green. (Y)": "Escala al llarg del verd. (Y)",
+"Scale along blue. (Z)": "Escala al llarg del blau. (Z)",
+"Scale in red/blue plane. (X+Z)": "Escala al pla vermell/blau. (X+Z)",
+"Scale in green/blue plane. (Y+Z)": "Escala al pla verd/blau. (Y+Z)",
+"Scale in red/green plane. (X+Y)": "Escala al pla vermell/verd. (X+Y)",
+"Scale uniform (from corners). (XYZ)": "Escala uniforme (des dels cantons). (XYZ)",
+"Component Info": "Informació del component",
+"Position": "Posició",
+"Size": "Mida",
+"Rotation": "Rotació",
+"Behaviors": "Comportaments",
+"Form Design": "Disseny del formulari",
+"Or enter a custom name…": "O escriu un nom personalitzat…"
 }

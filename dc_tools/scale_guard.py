@@ -3,7 +3,9 @@
 
 * the ``ScaleTool`` attribute hides the scale handles it names (the same
   bit mask the format keeps as the definition's «no scale» mask):
-  1 X, 2 Y, 4 Z, 8 XY, 16 XZ, 32 YZ, 64 uniform (the corners);
+  1 X, 2 Y, 4 Z, 8 XZ (red/blue plane), 16 YZ (green/blue), 32 XY (red/green),
+  64 uniform (the corners) — the order of SketchUp's Component Attributes
+  dialog (a mur_gelosia stores 119: only the red/blue plane is left);
 * once a dynamic component has been scaled — with the handles, a typed
   value or anything else — it is redrawn at its new size (copies, parts
   that keep their size, formulas) instead of being stretched, in the same
@@ -17,7 +19,7 @@ from .dc.apply import KEY, is_dynamic_root
 
 _log = logging.getLogger(__name__)
 
-AXIS_BITS = {(0,): 1, (1,): 2, (2,): 4, (0, 1): 8, (0, 2): 16, (1, 2): 32, (0, 1, 2): 64}
+AXIS_BITS = {(0,): 1, (1,): 2, (2,): 4, (0, 2): 8, (1, 2): 16, (0, 1): 32, (0, 1, 2): 64}
 _EPS = 1e-6
 
 

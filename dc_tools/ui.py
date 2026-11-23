@@ -4,8 +4,10 @@ as SketchUp's dialog shows them, and Apply to redraw it (one undo step)."""
 from __future__ import annotations
 
 import logging
+import os
 
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
                                QLineEdit, QPushButton, QScrollArea, QToolButton, QVBoxLayout,
                                QWidget)
@@ -18,6 +20,10 @@ from .dc.evaluate import _num
 from .dc.redraw import LEN, _LiveEvaluator, live_value
 
 _log = logging.getLogger(__name__)
+
+# What SketchUp's Component Options puts in its header and window, not in the
+# form: the picture, the name, the summary and the description.
+HEADER_ONLY = ("name", "summary", "description", "imageurl", "dialogwidth", "dialogheight")
 
 
 def context_members(scene):
@@ -125,6 +131,28 @@ class OptionsPanel(QWidget):
         self.title = QLabel(tr("Select a dynamic component."))
         self.title.setWordWrap(True)
         outer.addWidget(self.title)
+        # SketchUp's header: picture, big name, bold summary, description.
+        self.header = QWidget()
+        hl = QHBoxLayout(self.header)
+        hl.setContentsMargins(0, 0, 0, 4)
+        self.thumb = QLabel()
+        self.thumb.setFixedSize(96, 72)
+        self.thumb.setAlignment(Qt.AlignCenter)
+        self.thumb.setStyleSheet("border: 1px solid palette(mid);")
+        hl.addWidget(self.thumb)
+        texts = QVBoxLayout()
+        self.h_name = QLabel()
+        self.h_name.setStyleSheet("font-size: 15pt; font-weight: bold;")
+        self.h_summary = QLabel()
+        self.h_summary.setStyleSheet("font-weight: bold;")
+        self.h_description = QLabel()
+        for w in (self.h_name, self.h_summary, self.h_description):
+            w.setWordWrap(True)
+            texts.addWidget(w)
+        texts.addStretch(1)
+        hl.addLayout(texts, 1)
+        self.header.hide()
+        outer.addWidget(self.header)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.form_host = QWidget()
@@ -199,12 +227,15 @@ class OptionsPanel(QWidget):
         self.status.setText("")
         if group is None:
             self.title.setText(tr("Select a dynamic component."))
+            self.title.show()
+            self.header.hide()
             self._set_enabled(False)
             return
         root, _frame = A.part_in_context(self.app.viewport.scene, group)
         ev = _LiveEvaluator(root)
-        opts = O.options_of(root.attrs)
+        opts = [o for o in O.options_of(root.attrs) if o.name not in HEADER_ONLY]
         self.title.setText(tr("<b>{name}</b> — {n} options", name=root.name, n=len(opts)))
+        self._fill_header(root, ev)
         for opt in opts:
             if opt.name in LEN:
                 opt.value = live_value(root, opt.name)
@@ -238,6 +269,39 @@ class OptionsPanel(QWidget):
             self.form.addRow(label, w)
             self.rows.append((opt, w, initial))
         self._set_enabled(True)
+
+    def _fill_header(self, root, ev):
+        """Name, summary, description and picture the component has, unless
+        the author set one to «Users cannot see this attribute»."""
+        def text(name):
+            # Hidden only when the author said so (NONE); a value nobody
+            # marked is shown, as SketchUp's header shows it.
+            access = str(root.attrs.get(f"_{name}_access") or "").upper()
+            if access == "NONE":
+                return ""
+            try:
+                v = ev.value(root, name) if root.formula(name) else root.attrs.get(name)
+            except Exception:  # noqa: BLE001
+                v = root.attrs.get(name)
+            return "" if v is None else str(v).strip()
+        name, summary, desc = text("name"), text("summary"), text("description")
+        pix = QPixmap()
+        image = text("imageurl")
+        if image and not image.lower().startswith(("http:", "https:")):
+            path = image[7:] if image.lower().startswith("file:") else image
+            if os.path.isfile(path):
+                pix = QPixmap(path)
+        for label, value in ((self.h_name, name), (self.h_summary, summary),
+                             (self.h_description, desc)):
+            label.setText(value)
+            label.setVisible(bool(value))
+        if not pix.isNull():
+            self.thumb.setPixmap(pix.scaled(self.thumb.size(), Qt.KeepAspectRatio,
+                                            Qt.SmoothTransformation))
+        self.thumb.setVisible(not pix.isNull())
+        shown = bool(name or summary or desc or not pix.isNull())
+        self.header.setVisible(shown)
+        self.title.setVisible(not shown)
 
     # -- applying -------------------------------------------------------------------
     def _collect(self):
