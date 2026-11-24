@@ -98,6 +98,16 @@ def _copies_of(root, part):
     return out
 
 
+# SketchUp's ScaleTool handles, in the order of its Component Attributes
+# dialog (the bit value is what the attribute stores: a SET bit hides it).
+SCALE_HANDLES = (
+    (1, "Scale along red. (X)"), (2, "Scale along green. (Y)"),
+    (4, "Scale along blue. (Z)"), (8, "Scale in red/blue plane. (X+Z)"),
+    (16, "Scale in green/blue plane. (Y+Z)"), (32, "Scale in red/green plane. (X+Y)"),
+    (64, "Scale uniform (from corners). (XYZ)"),
+)
+
+
 class OptionsDialog(QDialog):
     """SketchUp's «Display rule» for one attribute: label, who sees it,
     units, and the choices of a list."""
@@ -142,10 +152,34 @@ class OptionsDialog(QDialog):
         self.access.currentIndexChanged.connect(
             lambda _i: box.setEnabled(self.access.currentData() == "LIST"))
         box.setEnabled(self.access.currentData() == "LIST")
+        self.handles = None
+        if name == "scaletool":
+            # The handles the user may drag: ticked = available. The stored
+            # number has a bit SET for each handle that is hidden.
+            try:
+                mask = int(float(str(attrs.get("scaletool") or 0).strip().lstrip("=")))
+            except ValueError:
+                mask = 0
+            from PySide6.QtWidgets import QCheckBox
+            hb = QWidget()
+            hl = QVBoxLayout(hb)
+            hl.setContentsMargins(0, 0, 0, 0)
+            self.handles = []
+            for bit, text in SCALE_HANDLES:
+                cb = QCheckBox(tr(text))
+                cb.setChecked(not (mask & bit))
+                hl.addWidget(cb)
+                self.handles.append((bit, cb))
+            form.addRow(tr("Scale handles"), hb)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         form.addRow(bb)
+
+    def scale_mask(self):
+        if not self.handles:
+            return None
+        return sum(bit for bit, cb in self.handles if not cb.isChecked())
 
     def _add_choice(self, label, value):
         r = self.choices.rowCount()
@@ -162,9 +196,11 @@ class OptionsDialog(QDialog):
                 choices.append((l, v if v else l))
         access = self.access.currentData()
         units = self.units.currentData()
+        mask = self.scale_mask()
         return AU.set_changes(name, formlabel=self.label.text().strip() or "",
                               access=access, units=units if units != "DEFAULT" else "",
-                              options=choices if access == "LIST" else [])
+                              options=choices if access == "LIST" else [],
+                              **({"value": str(mask)} if mask is not None else {}))
 
 
 class AttributesPanel(QWidget):
@@ -214,10 +250,12 @@ class AttributesPanel(QWidget):
         self.add_btn.setText("Add attribute")
         self.add_btn.setPopupMode(QToolButton.InstantPopup)
         menu = QMenu(self.add_btn)
-        for name, _u in AU.PREDEFINED:
-            menu.addAction(AU.LABELS[name], lambda n=name: self.add_attribute(n))
-        menu.addSeparator()
-        menu.addAction(tr("Custom…"), self.add_custom)
+        for title, items in AU.GROUPS:          # SketchUp's list, by sections
+            menu.addSection(tr(title))
+            for name, _u in items:
+                menu.addAction(AU.LABELS[name], lambda n=name: self.add_attribute(n))
+        menu.addSection("")
+        menu.addAction(tr("Or enter a custom name…"), self.add_custom)
         self.add_btn.setMenu(menu)
         self.del_btn = QPushButton("Delete")
         self.del_btn.clicked.connect(self.delete_attribute)
@@ -465,7 +503,7 @@ class AttributesPanel(QWidget):
                 value = repr(float(v))
             except Exception:  # noqa: BLE001
                 value = "0"
-        elif name in ("rotx", "roty", "rotz", "copies", "hidden"):
+        elif name in ("rotx", "roty", "rotz", "copies", "hidden", "scaletool"):
             value = "0"
         self._commit(AU.set_changes(name, value=value), tr("{name} added.", name=AU.LABELS.get(name, name)))
 

@@ -118,5 +118,20 @@
 "The name of the material the part is painted with.": "El nombre del material con que está pintada la pieza.",
 "How many <b>extra</b> copies of the part to make (Copies = 3 gives four parts in all). Inside a formula, <code>copy</code> is the number of the part being drawn: 0 for the original, 1, 2, 3… for the copies; use it to place each copy, e.g. <code>Z = (copy+1)*parent!lenz/parent!n</code>.": "Cuántas copias <b>adicionales</b> de la pieza hay que hacer (Copies = 3 da cuatro piezas en total). Dentro de una fórmula, <code>copy</code> es el número de la pieza que se dibuja: 0 para el original, 1, 2, 3… para las copias; úsalo para colocar cada copia, p. ej. <code>Z = (copy+1)*parent!lenz/parent!n</code>.",
 "The part's name. It is what other formulas use to refer to it (<code>Shelf!lenx</code>).": "El nombre de la pieza. Es lo que usan las demás fórmulas para referirse a ella (<code>Shelf!lenx</code>).",
-"Free text kept with the component (for lists, reports…). They do not change its shape.": "Texto libre que se guarda con el componente (para listados, informes…). No cambia su forma."
+"Free text kept with the component (for lists, reports…). They do not change its shape.": "Texto libre que se guarda con el componente (para listados, informes…). No cambia su forma.",
+"Scale handles": "Tiradores de escala",
+"Scale along red. (X)": "Escala a lo largo del rojo. (X)",
+"Scale along green. (Y)": "Escala a lo largo del verde. (Y)",
+"Scale along blue. (Z)": "Escala a lo largo del azul. (Z)",
+"Scale in red/blue plane. (X+Z)": "Escala en el plano rojo/azul. (X+Z)",
+"Scale in green/blue plane. (Y+Z)": "Escala en el plano verde/azul. (Y+Z)",
+"Scale in red/green plane. (X+Y)": "Escala en el plano rojo/verde. (X+Y)",
+"Scale uniform (from corners). (XYZ)": "Escala uniforme (desde las esquinas). (XYZ)",
+"Component Info": "Información del componente",
+"Position": "Posición",
+"Size": "Tamaño",
+"Rotation": "Rotación",
+"Behaviors": "Comportamientos",
+"Form Design": "Diseño del formulario",
+"Or enter a custom name…": "O escribe un nombre personalizado…"
 }
