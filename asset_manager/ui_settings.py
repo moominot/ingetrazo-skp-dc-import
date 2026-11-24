@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""«Components manager settings»: the model sites «Open a model site» offers,
+"""«Library settings»: the model sites «Open a model site» offers,
 and the catalog folders, each one watched in real time or read again with
 Update."""
 from __future__ import annotations
@@ -83,7 +83,7 @@ class SiteDialog(QDialog):
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(tr("Components manager settings"))
+        self.setWindowTitle(tr("Library settings"))
         self.setMinimumWidth(520)
         lay = QVBoxLayout(self)
 

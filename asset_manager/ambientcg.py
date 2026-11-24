@@ -24,8 +24,12 @@ HDRI_ZIP = "https://ambientcg.com/get?file={id}_{res}.zip"
 CREDIT = 'Free CC0 assets from <a href="https://ambientcg.com">ambientcg.com</a>.'
 HOSTS = ("ambientcg.com", "struffelproductions.com")
 KINDS = (("HDRIs (360° backgrounds)", "hdris"), ("Materials", "materials"))
-#: The API's asset type of each kind.
-API_TYPE = {"hdris": "HDRI", "materials": "Material"}
+#: The API's asset types of each kind. The Materials tab also lists the
+#: site's decals and atlases: they come as the same zip of maps (with an
+#: opacity map), and show up as categories of their own.
+API_TYPE = {"hdris": ("HDRI",), "materials": ("Material", "Decal", "Atlas")}
+#: The extra category an asset type is listed under, besides its own.
+TYPE_CATEGORY = {"Decal": "Decals", "Atlas": "Atlases"}
 RESOLUTIONS = ("1k", "2k", "4k")
 PAGE = 500
 LISTING_MAX_AGE = 24 * 3600
@@ -47,11 +51,12 @@ def entry(a: dict) -> dict:
     """One asset of the API as ``{id, name, categories, tags, size_m, thumb}``."""
     aid = str(a.get("assetId") or "")
     cat = str(a.get("displayCategory") or "").strip()
+    extra = TYPE_CATEGORY.get(a.get("dataType"))
     thumbs = a.get("previewImage") or {}
     return {
         "id": aid,
         "name": str(a.get("displayName") or aid),
-        "categories": [cat] if cat else [],
+        "categories": [c for c in (cat, extra) if c],
         "tags": [str(t) for t in (a.get("tags") or [])],
         "dimensions_cm": [a.get("dimensionX"), a.get("dimensionY")],
         "thumb": thumbs.get("128-PNG") or thumbs.get("256-PNG") or "",
@@ -59,11 +64,11 @@ def entry(a: dict) -> dict:
 
 
 def entries(pages: list[dict], kind: str = "materials") -> list[dict]:
-    want = API_TYPE.get(kind, "Material")
+    want = API_TYPE.get(kind, API_TYPE["materials"])
     out, seen = [], set()
     for page in pages:
         for a in page.get("foundAssets") or []:
-            if not isinstance(a, dict) or a.get("dataType") not in (None, want):
+            if not isinstance(a, dict) or a.get("dataType") not in (None, *want):
                 continue
             e = entry(a)
             if e["id"] and e["id"] not in seen:
@@ -178,7 +183,9 @@ class Source:
 
     def listing(self, kind: str, done, refresh: bool = False):
         """Every asset of ``kind`` (the API pages 500 at a time); cached for a day."""
-        path = cache_root() / f"{kind}.json"
+        # "-2": the Materials list now holds decals and atlases too, so a
+        # list cached before that is not reused.
+        path = cache_root() / f"{kind}-2.json"
         fresh = path.is_file() and time.time() - path.stat().st_mtime < LISTING_MAX_AGE
 
         def from_disk():
@@ -194,7 +201,7 @@ class Source:
         include = "previewData,displayData,tagData,dimensionsData"
 
         def fetch(offset):
-            self.client.get(f"{API}?type={API_TYPE[kind]}&sort=Popular&limit={PAGE}&offset={offset}"
+            self.client.get(f"{API}?type={','.join(API_TYPE[kind])}&sort=Popular&limit={PAGE}&offset={offset}"
                             f"&include={include}", lambda d, err: got(offset, d, err))
 
         def got(offset, data, err):
@@ -221,6 +228,9 @@ class Source:
             done(items, "")
 
         fetch(0)
+
+    def thumb_path(self, e):
+        return cache_root() / "thumbs" / f"{online.safe_name(e['id'])}.png"
 
     def thumbnail(self, e, done):
         path = cache_root() / "thumbs" / f"{online.safe_name(e['id'])}.png"

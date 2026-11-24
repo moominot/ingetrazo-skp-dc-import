@@ -219,6 +219,17 @@ hp = {"foundAssets": [{"assetId": "NightEnvironmentHDRI011", "dataType": "HDRI",
                       {"assetId": "Bricks097", "dataType": "Material", "displayName": "Bricks 097"}]}
 ok([e["id"] for e in ambientcg.entries([hp], "hdris")] == ["NightEnvironmentHDRI011"]
    and [e["id"] for e in ambientcg.entries([hp])] == ["Bricks097"], "listings keep only the kind asked for")
+dp = {"foundAssets": [{"assetId": "ManholeCover011", "dataType": "Decal", "displayName": "Manhole Cover 011",
+                       "displayCategory": "Manhole Cover", "dimensionX": 90, "dimensionY": 90},
+                      {"assetId": "GraffitiSet001", "dataType": "Atlas", "displayName": "Graffiti Set 001",
+                       "displayCategory": "Graffiti Set"},
+                      {"assetId": "BricksSubstance008", "dataType": "Substance", "displayName": "Bricks Substance 008"},
+                      {"assetId": "Bricks097", "dataType": "Material", "displayName": "Bricks 097", "displayCategory": "Bricks"}]}
+des = {e["id"]: e for e in ambientcg.entries([dp])}
+ok(set(des) == {"ManholeCover011", "GraffitiSet001", "Bricks097"}, "the Materials list holds decals and atlases, not substances")
+ok(des["ManholeCover011"]["categories"] == ["Manhole Cover", "Decals"] and des["GraffitiSet001"]["categories"] == ["Graffiti Set", "Atlases"]
+   and des["Bricks097"]["categories"] == ["Bricks"], "decals and atlases are also under a category of their own")
+ok(ambientcg.tile_size_m(des["ManholeCover011"]) == (0.9, 0.9) and not ambientcg.entries([dp], "hdris"), "a decal keeps its real size; HDRIs stay apart")
 ok(online.host_allowed("https://acg-download.struffelproductions.com/x.zip", ambientcg.HOSTS)
    and online.host_allowed("https://ambientcg.com/get?file=a", ambientcg.HOSTS)
    and not online.host_allowed("https://struffelproductions.com.evil.org/x", ambientcg.HOSTS)
