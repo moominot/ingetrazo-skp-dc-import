@@ -16,6 +16,9 @@ HDRI_SUFFIXES = (".hdr", ".exr")
 MANIFEST_END = ".pbr.json"
 RSMAT = ".rsmat"                 # Render Studio's material file (JSON, pictures in a folder beside it)
 RSMAT_FORMAT = "render-studio-material"
+IGMAT = ".igmat"                 # IngeTrazo's own material file: a ZIP with material.json and textures/
+_IGMAT_DOC_MAX = 8 << 20         # a material.json larger than this is not one
+ZIP_LIKE = (".zip", IGMAT)       # files whose members are read from inside
 #: sub-folders of the extension's own folder where saved assets go
 SAVE_DIRS = {"materials": "Materials", "models": "Models", "hdris": "Backgrounds"}
 _SETTINGS_KEY = "asset_manager/folders"
@@ -61,7 +64,8 @@ class Item:
         if self.scene_mat is not None:
             return f"drawing::{self.name}"
         if self.spec is not None:
-            return f"{self.path}::material"
+            n = self.spec.get("index")
+            return f"{self.path}::material" + (f"::{n}" if n else "")
         if self.maps:
             return f"{self.path}::{self.maps['color']}"
         return f"{self.path}::{self.member}" if self.member else str(self.path)
@@ -309,6 +313,48 @@ def read_rsmat(path: Path) -> dict | None:
     return spec if (spec.get("color") or spec.get("rgb")) else None
 
 
+def read_igmat(path: Path) -> list[dict]:
+    """The materials of an IngeTrazo ``.igmat`` as specs (colour, picture, size, translucency, finish): the file is a ZIP with
+    ``material.json`` and the pictures under ``textures/``, so a spec's ``color`` is the picture's member inside the file. One
+    file can hold several (each spec has its ``index``). ``[]`` when it is not one. Render Studio's settings, which its own
+    files carry beside, are not read here: its **Load material…** brings them."""
+    import json
+    import zipfile
+    try:
+        with zipfile.ZipFile(path) as z:
+            info = z.getinfo("material.json")
+            if info.file_size > _IGMAT_DOC_MAX:
+                return []
+            data = json.loads(z.read(info).decode("utf-8"))
+            members = set(z.namelist())
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile, RuntimeError):
+        return []
+    raw = data.get("materials") if isinstance(data, dict) else None
+    if not isinstance(raw, list) or not isinstance(data.get("format"), int) or data["format"] > 1:
+        return []
+    out = []
+    for i, r in enumerate(raw):
+        if not isinstance(r, dict) or not str(r.get("name") or "").strip():
+            continue
+        spec = {"name": str(r["name"]).strip(), "source": "igmat", "index": i}
+        try:
+            if isinstance(r.get("color"), (list, tuple)) and len(r["color"]) >= 3:
+                spec["rgb"] = [float(c) for c in r["color"][:3]]
+            tex = r.get("texture") if isinstance(r.get("texture"), dict) else {}
+            if isinstance(tex.get("embed"), str) and tex["embed"] in members:
+                spec["color"] = tex["embed"]
+                spec["size_m"] = [float(tex.get("sw") or 1.0), float(tex.get("sh") or 1.0)]
+            if r.get("opacity") is not None:
+                spec["opacity"] = float(r["opacity"])
+        except (TypeError, ValueError):
+            continue
+        if r.get("finish"):
+            spec["finish"] = str(r["finish"])
+        if spec.get("color") or spec.get("rgb"):
+            out.append(spec)
+    return out
+
+
 def _manifest_items(d: Path, files, root: Path) -> tuple[list[Item], set]:
     """The materials the ``.pbr.json`` manifests of folder ``d`` describe,
     and the image names they use (so the loose-image reader skips them)."""
@@ -316,6 +362,11 @@ def _manifest_items(d: Path, files, root: Path) -> tuple[list[Item], set]:
     items, used = [], set()
     for fn in files:
         low = fn.lower()
+        if low.endswith(IGMAT):
+            for spec in read_igmat(d / fn):
+                maps = {"color": spec["color"]} if spec.get("color") else None
+                items.append(Item(spec["name"], d / fn, None, root, maps=maps, spec=spec))
+            continue
         if low.endswith(RSMAT):
             spec = read_rsmat(d / fn)
         elif low.endswith(MANIFEST_END):
@@ -399,7 +450,7 @@ def preview_bytes(item: Item) -> bytes | None:
     """An image for the item's icon: the .skp's own preview, or a
     material's colour image (from the zip when it is in one)."""
     if item.maps:
-        if item.path.suffix.lower() == ".zip":
+        if item.path.suffix.lower() in ZIP_LIKE:
             return read_member(item.path, item.maps["color"], 40 * 1024 * 1024)
         try:
             return (Path(item.path).parent / item.maps["color"]).read_bytes()
@@ -447,7 +498,7 @@ def material_files(item: Item) -> tuple[Path, dict]:
     for key, name in item.maps.items():
         target = online.safe_target(out_dir, name.replace("\\", "/").split("/")[-1])
         if not target.is_file():
-            if item.path.suffix.lower() == ".zip":
+            if item.path.suffix.lower() in ZIP_LIKE:
                 data = read_member(item.path, name)
             else:
                 try:
@@ -562,11 +613,48 @@ def save_material(name: str, color_path=None, maps=None, size_m=(1.0, 1.0), rgb=
     return manifest, True
 
 
+def _save_scene_material_igmat(mat):
+    """The material of the drawing as one ``.igmat`` — IngeTrazo's own file: its picture inside (with the tile size, rotation and
+    tint), its colour, translucency and finish; IngeTrazo's own **Import…** takes it too. Only for a material with no maps beside
+    its picture (normal, roughness…: the ``.pbr.json`` folder keeps those) and in an IngeTrazo that has the format (0.6.3); else
+    None. Returns ``(file, newly saved)``."""
+    try:
+        from core.materials import Material
+        from formats import igmat
+    except ImportError:
+        return None
+    from . import online
+    tex = dict(getattr(mat, "texture", None) or {})
+    if tex.get("path") and Path(tex["path"]).is_file():
+        man = online.read_manifest(Path(tex["path"])) or {}
+        if any(isinstance(man.get(k), str) for k in online.MAP_KEYS[1:]):
+            return None                          # a set with maps: the manifest folder keeps them
+    else:
+        tex = {}
+    color = getattr(mat, "color", None)
+    if not tex and color is None:
+        raise ValueError("the material has neither a colour nor an image")
+    out_dir = _target_dir("materials", mat.name)
+    path = out_dir / (online.safe_name(mat.name) + IGMAT)
+    if path.is_file() or (out_dir / (online.safe_name(mat.name) + MANIFEST_END)).is_file():
+        return path, False
+    out_dir.mkdir(parents=True, exist_ok=True)
+    igmat.save_materials(path, [Material(mat.name, color=tuple(color) if color is not None else None,
+                                         texture=tex or None, opacity=getattr(mat, "opacity", None),
+                                         finish=getattr(mat, "finish", None))])
+    return path, True
+
+
 def save_scene_material(mat, make_preview=None):
     """A material of the drawing (``core.materials.Material``) into the
-    catalog; a plain colour gets the picture ``make_preview(color, opacity,
-    finish)`` returns (PNG bytes). Returns ``(manifest, newly saved)``."""
+    catalog: one ``.igmat`` when IngeTrazo has that format and the material
+    has no maps beside its picture, else a folder with a ``.pbr.json``
+    manifest (a plain colour then gets the picture ``make_preview(color,
+    opacity, finish)`` returns, as PNG bytes). Returns ``(file, newly saved)``."""
     from . import online
+    saved = _save_scene_material_igmat(mat)
+    if saved is not None:
+        return saved
     tex = getattr(mat, "texture", None) or {}
     path = tex.get("path")
     color_path = Path(path) if path and Path(path).is_file() else None

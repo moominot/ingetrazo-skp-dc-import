@@ -8,7 +8,7 @@ install independently:
 |---|---|---|
 | **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
 | **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
-| **Library** | `asset_manager/` | A tray tab (named «Biblioteca» in Catalan): the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and the drawing's materials listed beside the catalog's (type filter; **Save to catalog** keeps them, with a simple picture for plain colours; Render Studio `.rsmat` files are read), and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models) that **Save to catalog** keeps offline; heavy models as light **proxies** (an envelope in the drawing, the full model in an `.igz` of its own and in the render). |
+| **Library** | `asset_manager/` | A tray tab (named «Biblioteca» in Catalan): the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and the drawing's materials listed beside the catalog's (type filter; **Save to catalog** keeps them as IngeTrazo's own `.igmat` files; `.igmat` files, Render Studio's and IngeTrazo's, and its older `.rsmat` files are read), and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models) that **Save to catalog** keeps offline; heavy models as light **proxies** (an envelope in the drawing, the full model in an `.igz` of its own and in the render). |
 
 None imports another. Installed together, you can import a `.skp`, edit its dynamic
 components and export it back.
@@ -83,9 +83,15 @@ components and export it back.
   for Render Studio (the user's folder is left as it is).
 - **Materials of the drawing** are listed beside the catalog's, marked **(drawing)**, and have a folder of their own in the
   folder list (*Materials of this drawing*). **Save to catalog** keeps the chosen one in the extension's own folder
-  (`Materials/`): its picture and maps, or a simple generated picture for a plain colour, with its translucency and finish;
-  **Save all** keeps every one that is not in the catalog yet. A catalog material is a folder with a `.pbr.json` manifest,
-  the one Render Studio reads; Render Studio's own `.rsmat` files are read too (its newer `.igmat` files are not yet).
+  (`Materials/`) as one **`.igmat`** — IngeTrazo's own material file, a single ZIP with the picture inside at its tile size,
+  rotation and tint, the colour, the translucency and the finish — so IngeTrazo's own **Import…** and *My materials* take it too
+  (it needs IngeTrazo 0.6.3; before that, and for a material whose picture has maps beside it — normal, roughness… — the
+  catalog keeps a folder with a `.pbr.json` manifest, which holds the maps, and a plain colour gets a simple generated picture);
+  **Save all** keeps every one that is not in the catalog yet. The catalog reads `.igmat` files wherever they are in its
+  folders (one file can hold several materials, each its own entry), the manifest folders Render Studio reads, and Render
+  Studio's older `.rsmat` files. **Insert** on an `.igmat` loads the paint bucket with its picture (or colour), tile size,
+  translucency and finish; Render Studio's own settings for the material — the ones its `.igmat` carries beside — come with
+  Render Studio's **Load material…**.
   **Insert** on a material loads the paint bucket with it, on a background makes it the 360° background, on a model
   makes it follow the cursor. The **Open a model site** button and the folders' *watched* option are as before.
 - A `.skp` **dragged from the file explorer** onto the view also goes through the `.skp`
@@ -156,7 +162,7 @@ The five tabs of the Library, in order (the panel is named «Biblioteca» in Cat
 </tr>
 </table>
 
-Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.0, dc_tools 0.3.5, asset_manager 0.5.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.0, dc_tools 0.3.6, asset_manager 0.6.0, for IngeTrazo 0.6 (Extension API 2).
 
 
 ## Render Studio
