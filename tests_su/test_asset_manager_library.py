@@ -1,6 +1,6 @@
 """asset_manager 0.5: what goes into the catalog (materials of the drawing,
-online downloads, .rsmat files) and how it reads back. Pure Python, no Qt,
-no network. argv: <extension repo>"""
+online downloads, .rsmat and .igmat files) and how it reads back. Pure Python, no Qt,
+no network. argv: <extension repo> [<IngeTrazo source>: also tries saving as .igmat]"""
 import json, os, sys, tempfile, pathlib
 tmp = pathlib.Path(tempfile.mkdtemp())
 os.environ["ASSET_MANAGER_HOME"] = str(tmp / "home")
@@ -67,6 +67,68 @@ ok("Plano" in s and not s["Plano"].maps, ".rsmat with a plain colour")
 ok("Otro" not in s, "another JSON is not a material")
 f, paths = catalog.material_files(s["Laca"])
 ok(f.is_file() and f.name == "picture.png", "its picture goes to the extension's folder to paint with")
+
+# IngeTrazo's .igmat files are read (a ZIP: material.json and textures/)
+import zipfile
+def igmat(path, materials, members=None, fmt=1):
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("material.json", json.dumps({"format": fmt, "materials": materials}))
+        for name, data in (members or {}).items():
+            z.writestr(name, data)
+ig = catalog.default_folder() / "ig"; ig.mkdir()
+igmat(ig / "Madera.igmat", [{"name": "Madera", "texture": {"embed": "textures/abc-wood.png", "sw": 1.5, "sh": 0.75},
+                              "opacity": 0.9, "finish": "satin",
+                              "render_studio": {"type": "generic", "roughness": 0.3, "maps": {"glow": {"source": "file", "path": "rs-maps/map-1.png"}}}}],
+      {"textures/abc-wood.png": PNG, "rs-maps/map-1.png": PNG})
+igmat(ig / "Pinturas.igmat", [{"name": "Azul", "color": [0.1, 0.2, 0.9]}, {"name": "Verde", "color": [0.1, 0.8, 0.2], "opacity": 0.5},
+                               {"name": "  "}, {"color": [1, 1, 1]}])
+igmat(ig / "Nueva.igmat", [{"name": "Futura", "color": [1, 0, 0]}], fmt=2)
+(ig / "Rota.igmat").write_bytes(b"not a zip")
+with zipfile.ZipFile(ig / "SinDoc.igmat", "w") as z:
+    z.writestr("other.json", "{}")
+s = scan()
+w = s["Madera"]
+ok(w.is_material and w.type_key == "material" and w.maps == {"color": "textures/abc-wood.png"}, ".igmat with a picture: a material, the picture is its member")
+ok(catalog.material_size(w) == (1.5, 0.75) and w.spec["finish"] == "satin" and w.spec["opacity"] == 0.9, "...its tile size, translucency and finish")
+ok(catalog.preview_bytes(w) == PNG, "...its icon is read from inside the file")
+ok(sorted(w.maps) == ["color"], "...Render Studio's settings and map pictures in the same file are left to Render Studio (its own Load brings them)")
+ok(s["Azul"].is_material and not s["Azul"].maps and s["Azul"].spec["rgb"] == [0.1, 0.2, 0.9], "a plain colour in an .igmat")
+ok(s["Verde"].spec["opacity"] == 0.5 and s["Azul"].key != s["Verde"].key, "several materials in one file: each its own, with its own key")
+ok(len([i for i in catalog.scan() if i.path.name == "Pinturas.igmat"]) == 2, "(a nameless one is left out)")
+ok("Futura" not in s, "a newer format is left alone")
+ok(not any(i.path.name in ("Rota.igmat", "SinDoc.igmat") for i in catalog.scan()), "a file that is not an .igmat lists nothing")
+f, paths = catalog.material_files(w)
+ok(f.is_file() and f.read_bytes() == PNG and f.name == "abc-wood.png", "its picture goes to the extension's folder to paint with")
+ok(catalog.material_files(w)[0] == f, "...once")
+
+# an IngeTrazo that has the format: a drawing's material is kept as one .igmat
+if len(sys.argv) > 2:
+    sys.path.insert(0, os.path.abspath(sys.argv[2]))
+    from core.materials import Material
+    from formats import igmat as igm
+    pic = tmp / "cache" / "wood.png"; pic.write_bytes(PNG)
+    class Madera2: name = "Roble"; color = None; texture = {"path": str(pic), "sw": 1.2, "sh": 0.6}; opacity = 0.8; finish = "satin"
+    p, new = catalog.save_scene_material(Madera2)
+    ok(new and p.suffix == ".igmat" and p.is_file(), f"a material of the drawing is kept as an .igmat ({p.name})")
+    back = igm.load_materials(p)
+    ok(len(back) == 1 and back[0].name == "Roble" and back[0].texture["sw"] == 1.2 and back[0].finish == "satin", "...IngeTrazo reads it")
+    r = scan()["Roble"]
+    ok(r.is_material and catalog.material_size(r) == (1.2, 0.6) and catalog.preview_bytes(r) == PNG, "...and so does the Library")
+    ok(catalog.save_scene_material(Madera2)[1] is False, "kept twice: already there")
+    class Pintura: name = "Coral"; color = (0.9, 0.4, 0.3); texture = None; opacity = None; finish = None
+    p, new = catalog.save_scene_material(Pintura, lambda c, o, f: PNG)
+    ok(new and p.suffix == ".igmat" and scan()["Coral"].spec["rgb"] == [0.9, 0.4, 0.3], "a plain colour too (no picture needed: the icon is drawn)")
+    # a set with maps beside its picture keeps the manifest folder: the .igmat has no place for them
+    class Ladrillo2: name = "Ladrillo2"; color = None; texture = {"path": str(maps["color"]), "sw": 2.0, "sh": 1.0}; opacity = None; finish = None
+    p, new = catalog.save_scene_material(Ladrillo2)
+    ok(new and p.name.endswith(".pbr.json") and sorted(scan()["Ladrillo2"].maps) == ["color", "normal_gl", "roughness"],
+       "a set with maps keeps the .pbr.json folder, with its maps")
+    class Nada: name = "Nada"; color = None; texture = None; opacity = None; finish = None
+    try:
+        catalog.save_scene_material(Nada)
+        ok(False, "a material with nothing to keep is refused")
+    except ValueError:
+        ok(True, "a material with nothing to keep is refused")
 
 print(f"\n{len(fails)} failed" if fails else "\nall passed")
 sys.exit(1 if fails else 0)
