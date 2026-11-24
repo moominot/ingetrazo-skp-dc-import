@@ -133,5 +133,21 @@
 "Rotation": "Rotación",
 "Behaviors": "Comportamientos",
 "Form Design": "Diseño del formulario",
-"Or enter a custom name…": "O escribe un nombre personalizado…"
+"Or enter a custom name…": "O escribe un nombre personalizado…",
+"Make it cut its opening in a wall": "Hacer que perfore la pared",
+"Put the selected window or door in a frame that cuts its hole in a wall and follows its size.": "Pon la ventana o puerta seleccionada en un marco que perfora la pared y sigue su tamaño.",
+"Flip the cut direction": "Invertir el sentido del corte",
+"Reverse the side the selected window or door cuts toward; an arrow shows it.": "Cambia el lado hacia el que corta la ventana o puerta seleccionada; una flecha lo indica.",
+"Cut direction": "Sentido del corte",
+"Front (−Y)": "Frente (−Y)",
+"Back (+Y)": "Atrás (+Y)",
+"Left (−X)": "Izquierda (−X)",
+"Right (+X)": "Derecha (+X)",
+"Top (+Z)": "Arriba (+Z)",
+"Bottom (−Z)": "Abajo (−Z)",
+"Cut plane": "Plano de corte",
+"Cut plane…": "Plano de corte…",
+"The side of the component that is flush with the wall:": "El lado del componente que queda a ras de la pared:",
+"Choose the side of the selected window or door that is flush with the wall; it then cuts its hole there.": "Elige el lado de la ventana o puerta seleccionada que queda a ras de la pared; allí hace el hueco.",
+" — not dynamic yet: add an attribute and it becomes dynamic.": " — aún no es dinámico: añade un atributo y lo será."
 }
