@@ -18,7 +18,10 @@ RSMAT = ".rsmat"                 # Render Studio's material file (JSON, pictures
 RSMAT_FORMAT = "render-studio-material"
 IGMAT = ".igmat"                 # IngeTrazo's own material file: a ZIP with material.json and textures/
 _IGMAT_DOC_MAX = 8 << 20         # a material.json larger than this is not one
-ZIP_LIKE = (".zip", IGMAT)       # files whose members are read from inside
+SKM = ".skm"                     # a SketchUp material file: a ZIP with document.xml and the pictures under ref/
+_SKM_DOC_MAX = 8 << 20
+_INCH = 0.0254                   # a .skm gives the tile size in inches
+ZIP_LIKE = (".zip", IGMAT, SKM)  # files whose members are read from inside
 #: sub-folders of the extension's own folder where saved assets go
 SAVE_DIRS = {"materials": "Materials", "models": "Models", "hdris": "Backgrounds"}
 _SETTINGS_KEY = "asset_manager/folders"
@@ -355,6 +358,90 @@ def read_igmat(path: Path) -> list[dict]:
     return out
 
 
+def read_skm(path: Path) -> dict | None:
+    """A SketchUp ``.skm`` material file as a spec (colour, picture, tile size, translucency, and the roughness, occlusion and metal
+    maps), or None when it is not one. The file is a ZIP: ``document.xml`` describes the material and the pictures are under
+    ``ref/``, so a spec's ``color`` and ``maps`` are members of the file. Read with the standard library, which refuses a file that
+    declares a DTD. Its normal map is left out: the file says which way its green channel points only as a number
+    (``normalMapStyle``) that could not be checked against a render, and a map read the wrong way gives the relief upside down."""
+    import zipfile
+    from xml.etree import ElementTree as ET
+    try:
+        with zipfile.ZipFile(path) as z:
+            info = z.getinfo("document.xml")
+            if info.file_size > _SKM_DOC_MAX:
+                return None
+            raw = z.read(info)
+            members = [n for n in z.namelist() if not n.endswith("/")]
+    except (OSError, KeyError, zipfile.BadZipFile, RuntimeError, ValueError):
+        return None
+    if b"<!DOCTYPE" in raw or b"<!ENTITY" in raw:
+        return None
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError:
+        return None
+    nodes: dict = {}
+    for el in root.iter():
+        nodes.setdefault(el.tag.rsplit("}", 1)[-1], el)       # names are matched without their namespace
+    mat = nodes.get("material")
+    if mat is None:
+        return None
+
+    def number(v, default=None):
+        try:
+            n = float(v)
+            return n if n == n else default
+        except (TypeError, ValueError):
+            return default
+
+    def member_of(file_name):
+        """The member of the ZIP a ``path`` / file name of the XML points to (under ``ref/``, else anywhere by its name)."""
+        base = str(file_name or "").replace("\\", "/").rsplit("/", 1)[-1]
+        if not base:
+            return None
+        for n in members:
+            if n == "ref/" + base:
+                return n
+        return next((n for n in members if n.rsplit("/", 1)[-1] == base), None)
+
+    spec = {"name": (mat.get("name") or "").strip() or Path(path).stem, "source": "skm"}
+    rgb = [number(mat.get(k)) for k in ("colorRed", "colorGreen", "colorBlue")]
+    if all(c is not None for c in rgb):
+        rgb = [max(0.0, min(1.0, c / 255.0)) for c in rgb]
+    else:
+        rgb = None
+    if number(mat.get("useTrans"), 0) == 1 and number(mat.get("trans")) is not None:
+        spec["opacity"] = max(0.0, min(1.0, 1.0 - number(mat.get("trans"))))
+    tex = nodes.get("texture")
+    color = None
+    if tex is not None:
+        image = next((e for e in tex.iter() if e.tag.rsplit("}", 1)[-1] == "image"), None)
+        color = member_of(image.get("path") if image is not None else None) or member_of(tex.get("textureFilename"))
+        if color is None:
+            refs = [n for n in members if n.startswith("ref/")]
+            color = refs[0] if len(refs) == 1 else None
+    if color is not None:
+        spec["color"] = color
+        sx, sy = number(tex.get("xScale")), number(tex.get("yScale"))
+        spec["size_m"] = [sx * _INCH if sx and sx > 0 else 1.0, sy * _INCH if sy and sy > 0 else 1.0]
+        maps = {}
+        for tag, key, switch in (("roughness_texture", "roughness", "enable_roughness"),
+                                 ("occlusion_texture", "ao", "enable_occlusion"),
+                                 ("metallic_texture", "metalness", "enable_metalness")):
+            el, on = nodes.get(tag), nodes.get(switch)
+            if el is None or (on is not None and (on.text or "").strip() == "0"):
+                continue
+            m = member_of(el.get("path"))
+            if m is not None:
+                maps[key] = m
+        if maps:
+            spec["maps"] = maps
+    elif rgb is not None:
+        spec["rgb"] = rgb
+    return spec if (spec.get("color") or spec.get("rgb")) else None
+
+
 def _manifest_items(d: Path, files, root: Path) -> tuple[list[Item], set]:
     """The materials the ``.pbr.json`` manifests of folder ``d`` describe,
     and the image names they use (so the loose-image reader skips them)."""
@@ -365,6 +452,12 @@ def _manifest_items(d: Path, files, root: Path) -> tuple[list[Item], set]:
         if low.endswith(IGMAT):
             for spec in read_igmat(d / fn):
                 maps = {"color": spec["color"]} if spec.get("color") else None
+                items.append(Item(spec["name"], d / fn, None, root, maps=maps, spec=spec))
+            continue
+        if low.endswith(SKM):
+            spec = read_skm(d / fn)
+            if spec is not None:
+                maps = ({"color": spec["color"], **spec.get("maps", {})} if spec.get("color") else None)
                 items.append(Item(spec["name"], d / fn, None, root, maps=maps, spec=spec))
             continue
         if low.endswith(RSMAT):

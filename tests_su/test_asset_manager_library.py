@@ -1,5 +1,5 @@
 """asset_manager 0.5: what goes into the catalog (materials of the drawing,
-online downloads, .rsmat and .igmat files) and how it reads back. Pure Python, no Qt,
+online downloads, .rsmat, .igmat and .skm files) and how it reads back. Pure Python, no Qt,
 no network. argv: <extension repo> [<IngeTrazo source>: also tries saving as .igmat]"""
 import json, os, sys, tempfile, pathlib
 tmp = pathlib.Path(tempfile.mkdtemp())
@@ -129,6 +129,70 @@ if len(sys.argv) > 2:
         ok(False, "a material with nothing to keep is refused")
     except ValueError:
         ok(True, "a material with nothing to keep is refused")
+
+# SketchUp's .skm files are read (a ZIP: document.xml and ref/)
+NS = ('xmlns="http://sketchup.google.com/schemas/sketchup/1.0/material" '
+      'xmlns:mat="http://sketchup.google.com/schemas/sketchup/1.0/material"')
+def skm(path, material, texture="", pbr="", ns=NS, members=None, doctype=""):
+    pre = "mat:" if ns else ""               # without namespaces there is no prefix either
+    body = f'<{pre}material {material}>{texture}{pbr}</{pre}material>'
+    xml = f'<?xml version="1.0" encoding="UTF-8"?>{doctype}<materialDocument {ns}>{body}</materialDocument>'
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("document.xml", xml)
+        for n, d in (members or {}).items():
+            z.writestr(n, d)
+sk = catalog.default_folder() / "sk"; sk.mkdir()
+tex = ('><mat:texture textureFilename="C:/somewhere/Wood_alb.png" xScale="78.7401574803" yScale="39.37007874">'
+       '<mat:images><mat:image id="1" path="Wood_alb_1.png" file_name="Wood_alb.png"/></mat:images></mat:texture>')
+pbr = ('<mat:pbrMR><mat:enable_roughness>1</mat:enable_roughness><mat:enable_occlusion>0</mat:enable_occlusion><mat:enable_normal>1</mat:enable_normal>'
+       '<mat:roughness_texture id="2" path="Wood_rgh_2.png" file_name="Wood_rgh.png"/>'
+       '<mat:occlusion_texture id="3" path="Wood_ao_3.png" file_name="Wood_ao.png"/>'
+       '<mat:normal_texture id="4" path="Wood_nrm_4.png" file_name="Wood_nrm.png"/>'
+       '<mat:metallic_texture id="5" path="Wood_met_5.png" file_name="Wood_met.png"/><mat:normalMapStyle>1</mat:normalMapStyle></mat:pbrMR>')
+files = {f"ref/Wood_{k}.png": PNG for k in ("alb_1", "rgh_2", "ao_3", "nrm_4", "met_5")}
+skm(sk / "Madera.skm", 'name="Madera" type="1" colorRed="200" colorGreen="100" colorBlue="50" trans="0.5" useTrans="1" hasTexture="1"' + tex, "", pbr,
+    members=files)
+skm(sk / "Teal.skm", 'name="Teal" type="0" colorRed="0" colorGreen="128" colorBlue="128" trans="1" useTrans="0" hasTexture="0"')
+skm(sk / "SinNombre.skm", 'type="0" colorRed="255" colorGreen="0" colorBlue="0"')
+skm(sk / "SinImagen.skm", 'name="SinImagen" type="1" colorRed="10" colorGreen="20" colorBlue="30" hasTexture="1"' + tex, members={})
+skm(sk / "SinEspacios.skm", 'name="Plana" type="0" colorRed="0" colorGreen="0" colorBlue="255"', ns="")
+skm(sk / "Peligro.skm", 'name="Peligro" type="0" colorRed="1" colorGreen="1" colorBlue="1"', doctype='<!DOCTYPE x [<!ENTITY a "b">]>')
+(sk / "Rota.skm").write_bytes(b"not a zip")
+with zipfile.ZipFile(sk / "SinDoc.skm", "w") as z:
+    z.writestr("other.xml", "<a/>")
+s = scan()
+w = s["Madera"]
+ok(w.is_material and w.maps["color"] == "ref/Wood_alb_1.png", ".skm with a picture: the picture is its member under ref/")
+ok(all(abs(a - b) < 1e-6 for a, b in zip(catalog.material_size(w), (2.0, 1.0))), "...its tile size, from inches to metres (78.74 in = 2 m)")
+ok(w.spec["opacity"] == 0.5, "...translucency 1 - trans when useTrans is 1")
+ok(sorted(w.maps) == ["color", "metalness", "roughness"],
+   f"...the roughness and metal maps, not the occlusion one that is switched off, and not the normal map ({sorted(w.maps)})")
+ok(catalog.preview_bytes(w) == PNG, "...its icon is read from inside the file")
+f, paths = catalog.material_files(w)
+man = json.loads((f.with_name(f.stem + ".pbr.json")).read_text())
+ok(f.is_file() and man.get("roughness") and man.get("metalness") and "normal_gl" not in man and "normal_dx" not in man,
+   "...painting copies the maps with a manifest Render Studio reads")
+t = s["Teal"]
+ok(t.is_material and not t.maps and [round(c, 3) for c in t.spec["rgb"]] == [0.0, 0.502, 0.502] and "opacity" not in t.spec,
+   "a plain colour (0-255 to 0-1), opaque when useTrans is 0 whatever trans says")
+ok(s["SinNombre"].spec["rgb"] == [1.0, 0.0, 0.0], "a file with no name takes the file's")
+ok(s["SinImagen"].maps is None and "rgb" in s["SinImagen"].spec, "a picture the file lost leaves its colour")
+ok("Plana" in s, "a writer that leaves the namespaces out is read too")
+ok("Peligro" not in s, "a file that declares a DTD is refused")
+ok(not any(i.path.name in ("Rota.skm", "SinDoc.skm") for i in catalog.scan()), "a file that is not a .skm lists nothing")
+
+# the real thing: every material SketchUp itself ships with
+real = pathlib.Path(r"C:\ProgramData\SketchUp\SketchUp 2026\SketchUp\Materials")
+if real.is_dir():
+    got = [(p, catalog.read_skm(p)) for p in sorted(real.glob("*/*.skm"))]
+    ok(got and all(sp is not None for _p, sp in got), f"all {len(got)} materials of SketchUp's own library are read")
+    bad = []
+    for p, sp in got:
+        names = set(zipfile.ZipFile(p).namelist())
+        if sp and sp.get("color") and not ({sp["color"], *sp.get("maps", {}).values()} <= names):
+            bad.append(p.name)
+    ok(not bad, f"...and every picture and map they name is inside the file ({bad[:3]})")
+    ok(any(sp.get("maps") for _p, sp in got) and any(not sp.get("color") for _p, sp in got), "...pictures with maps and plain colours both turn up")
 
 print(f"\n{len(fails)} failed" if fails else "\nall passed")
 sys.exit(1 if fails else 0)
