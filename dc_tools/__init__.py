@@ -11,7 +11,7 @@ a separate extension. This one needs neither OpenSKP nor any .skp file.
 """
 from __future__ import annotations
 
-__version__ = "0.3.7"
+__version__ = "0.3.8"
 
 import logging
 
@@ -58,6 +58,63 @@ def setup(app):
         tr("Component attributes…"), show_attributes,
         tip=tr("Make the selected component dynamic and edit its attributes and formulas."))
 
+    # The cut plane of a window or a door, and the arrow showing the way its
+    # hole is cut (see opening.py).
+    from . import opening
+    # IngeTrazo 0.6.3 has Cut Opening; once its own cut plane is there (the
+    # core's side_of), the core does all this and the extension stays out.
+    try:
+        import core.openings as _core_openings
+        own_cut_plane = hasattr(_core_openings, "side_of")
+        has_cut_opening = True
+    except ImportError:
+        own_cut_plane = has_cut_opening = False
+    if has_cut_opening and not own_cut_plane:
+        opening.install()
+
+    def cut_plane():
+        from PySide6.QtWidgets import QInputDialog
+        g = selected_top(app.viewport.scene)
+        if g is None:
+            return
+        names = [("front", tr("Front (−Y)")), ("back", tr("Back (+Y)")),
+                 ("left", tr("Left (−X)")), ("right", tr("Right (+X)")),
+                 ("top", tr("Top (+Z)")), ("bottom", tr("Bottom (−Z)"))]
+        cur = opening.side_of(g) or "front"
+        labels = [t for _k, t in names]
+        text, ok = QInputDialog.getItem(
+            getattr(app, "window", None), tr("Cut plane"),
+            tr("The side of the component that is flush with the wall:"),
+            labels, [k for k, _t in names].index(cur), False)
+        if not ok:
+            return
+        side = next(k for k, t in names if t == text)
+        try:
+            opening.set_side(app.viewport, g, side)
+        except Exception:  # noqa: BLE001
+            _log.exception("could not set the cut plane")
+
+    def flip_cut():
+        g = selected_top(app.viewport.scene)
+        if g is None:
+            return
+        try:
+            if not opening.flip(app.viewport, g):
+                cut_plane()
+        except Exception:  # noqa: BLE001
+            _log.exception("could not flip the cut")
+
+    own_ui = has_cut_opening and not own_cut_plane
+    if own_ui:
+        acts["cut_plane"] = app.add_menu_action(
+            tr("Cut plane…"), cut_plane,
+            tip=tr("Choose the side of the selected window or door that is flush with the wall; it then cuts its hole there."))
+        acts["flip_opening"] = app.add_menu_action(
+            tr("Flip the cut direction"), flip_cut,
+            tip=tr("Reverse the side the selected window or door cuts toward; an arrow shows it."))
+        if hasattr(app, "add_overlay"):
+            app.add_overlay(lambda vp, painter: opening.draw_arrow(app, vp, painter))
+
     if hasattr(app, "add_context_menu"):
         def context(menu, selection):
             scene = app.viewport.scene
@@ -72,6 +129,13 @@ def setup(app):
                                lambda: QTimer.singleShot(0, show_options))
             menu.addAction(tr("Component attributes…"),
                            lambda: QTimer.singleShot(0, show_attributes))
+            g = selected_top(scene)
+            if g is not None and own_ui:
+                menu.addAction(tr("Cut plane…"),
+                               lambda: QTimer.singleShot(0, cut_plane))
+                if opening.side_of(g) is not None:
+                    menu.addAction(tr("Flip the cut direction"),
+                                   lambda: QTimer.singleShot(0, flip_cut))
         app.add_context_menu(context)
 
     def kind(group):

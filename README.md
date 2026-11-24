@@ -55,6 +55,8 @@ components and export it back.
 - Both panels also work on a component **inside an open group or component**: select it there
   and edit it in place. A dynamic component inside an open dynamic component sees its parent
   (`Parent!LenX`, its ancestors' and siblings' names), as in SketchUp.
+- **A component becomes dynamic on its first attribute**: in Component Attributes, adding an attribute to a component that is not dynamic yet makes it dynamic (**Make dynamic** stays as the shortcut).
+- **Windows and doors that cut their wall** (IngeTrazo 0.6.3's Cut Opening): a dynamic component stands upright, so its blue axis is not the wall's. **Cut plane…** (menu, right-click) says which side is flush with the wall — front by default for a dynamic component — an arrow over the selected component shows the way its hole is cut, and **Flip the cut direction** reverses it. The component stays dynamic: options, scaling and redraws work, and the hole follows its size. Once IngeTrazo has this itself (ingelibre/ingetrazo#1612) the extension steps aside.
 - **Scaling** a dynamic component with IngeTrazo's Scale tool: only the handles its `ScaleTool`
   attribute allows are shown (bits 1 X, 2 Y, 4 Z, 8 XY, 16 XZ, 32 YZ, 64 uniform hide a
   handle), and once scaled — by a handle, a typed value or anything else — it is redrawn at
@@ -168,7 +170,7 @@ The five tabs of the Library, in order (the panel is named «Biblioteca» in Cat
 </tr>
 </table>
 
-Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.1, dc_tools 0.3.7, asset_manager 0.7.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.1, dc_tools 0.3.8, asset_manager 0.7.1, for IngeTrazo 0.6 (Extension API 2).
 
 **Languages.** The three extensions speak every language IngeTrazo does: English, Español, Català, Português (Brasil), 简体中文, 正體中文, Italiano, Bahasa Indonesia, Français, Deutsch, Polski, Русский, Tiếng Việt, ລາວ, ไทย, 日本語, 한국어, Українська, العربية, Български and Türkçe. They follow the language chosen in IngeTrazo; a text without a translation shows in English.
 

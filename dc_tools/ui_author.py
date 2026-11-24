@@ -295,8 +295,10 @@ class AttributesPanel(QWidget):
         dyn = self.root is not None and A.is_dynamic_root(self.root)
         self.make_btn.setEnabled(self.root is not None and not dyn)
         self.units.setEnabled(self.root is not None and not dyn)
+        # A component that is not dynamic yet becomes one on its first
+        # attribute (see _ensure_dynamic), so the editor is open to it too.
         for w in (self.add_btn, self.del_btn, self.opt_btn, self.table, self.tree):
-            w.setEnabled(dyn)
+            w.setEnabled(self.root is not None)
 
     def show_root(self, root, path=()):
         self.root, self.path = root, tuple(path)
@@ -310,7 +312,7 @@ class AttributesPanel(QWidget):
                 name = AU.merged(root).get("_name") or root.name
                 dyn = A.is_dynamic_root(root)
                 self.title.setText(f"<b>{name}</b>" + ("" if dyn else
-                                   tr(" — not dynamic yet: «Make dynamic» to give it attributes.")))
+                                   tr(" — not dynamic yet: add an attribute and it becomes dynamic.")))
                 self._fill_tree(root, None, ())
                 self.tree.expandAll()
                 self._select_tree(self.path)
@@ -483,7 +485,28 @@ class AttributesPanel(QWidget):
             value = repr(value)               # SketchUp keeps option values as text
         self._commit(AU.set_changes(name, value=value, formula=""), tr("{name} set.", name=name))
 
+    def _ensure_dynamic(self) -> bool:
+        """Make the selected component dynamic when it is not yet — what its
+        first attribute asks for — with the name and units the panel shows."""
+        g = self.root
+        if g is None:
+            return False
+        if A.is_dynamic_root(g):
+            return True
+        units = self.units.currentData()
+        try:
+            new = replace_in_document(self.app.viewport, g,
+                                      lambda _sc: A.make_dynamic_tree(g, g.name or tr("Component"), units))
+        except Exception as exc:  # noqa: BLE001
+            _log.exception("make dynamic failed")
+            self.status.setText(tr("Could not make it dynamic: {error}", error=exc))
+            return False
+        self.show_root(new, self.path)
+        return True
+
     def add_attribute(self, name: str):
+        if not self._ensure_dynamic():
+            return
         g = self._part()
         if g is None:
             return
@@ -508,12 +531,16 @@ class AttributesPanel(QWidget):
         self._commit(AU.set_changes(name, value=value), tr("{name} added.", name=AU.LABELS.get(name, name)))
 
     def add_custom(self):
+        if self.root is None:
+            return
         name, ok = QInputDialog.getText(self, tr("Add attribute"), tr("Name (letters, digits, _):"))
         if not ok:
             return
         name = name.strip().lower()
         if not AU.valid_name(name) or name in AU.PREDEFINED_NAMES:
             self.status.setText(tr("«{name}» cannot be an attribute name.", name=name))
+            return
+        if not self._ensure_dynamic():
             return
         self._commit(AU.set_changes(name, value="", label=name), tr("{name} added.", name=name))
 
