@@ -141,7 +141,20 @@ components and export it back.
 
 ![The right-click menu on a proxy](docs/asset_manager_proxy_menu.png)
 
-![The Library: the catalog with the type filter, the drawing's materials marked (drawing) and Save to catalog](docs/asset_manager_library.png)
+The five tabs of the Library, in order (the panel is named «Biblioteca» in Catalan):
+
+<table>
+<tr>
+<td valign="top"><img src="docs/asset_manager_in_drawing.png" width="230" alt="In drawing: the components of the document with their count"><br><b>In drawing</b>: the document's components, with a preview and how many there are.</td>
+<td valign="top"><img src="docs/asset_manager_library.png" width="230" alt="My catalog: models, materials and backgrounds with a type filter; the drawing's materials marked (drawing)"><br><b>My catalog</b>: models, materials and backgrounds, with a type filter; the drawing's materials are marked <i>(drawing)</i> and <b>Save to catalog</b> keeps them.</td>
+<td valign="top"><img src="docs/asset_manager_backgrounds.png" width="230" alt="360° backgrounds from Poly Haven"><br><b>360° backgrounds</b> (online): free HDRIs, <b>Use as 360° background</b> or <b>Save to catalog</b>.</td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/asset_manager_online_materials.png" width="230" alt="Online materials from Poly Haven"><br><b>Materials</b> (online): full PBR sets; <b>Paint with it</b> loads the paint bucket, <b>Save to catalog</b> keeps a copy.</td>
+<td valign="top"><img src="docs/asset_manager_online_models.png" width="230" alt="Online 3-D models from Poly Haven"><br><b>Models</b> (online): glTF models that follow the cursor to be placed, also <b>as a proxy</b>.</td>
+<td></td>
+</tr>
+</table>
 
 Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.0, dc_tools 0.3.5, asset_manager 0.5.1, for IngeTrazo 0.6 (Extension API 2).
 
