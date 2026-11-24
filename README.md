@@ -156,7 +156,7 @@ The five tabs of the Library, in order (the panel is named «Biblioteca» in Cat
 </tr>
 </table>
 
-Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.0, dc_tools 0.3.5, asset_manager 0.5.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.0, dc_tools 0.3.6, asset_manager 0.5.1, for IngeTrazo 0.6 (Extension API 2).
 
 
 ## Render Studio
