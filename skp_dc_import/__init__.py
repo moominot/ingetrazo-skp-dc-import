@@ -11,7 +11,7 @@ separate *dc_tools* extension, which reads the same data.
 """
 from __future__ import annotations
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 import logging
 from pathlib import Path
