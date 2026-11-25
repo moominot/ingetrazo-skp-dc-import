@@ -143,5 +143,10 @@
 "Use as 360° background": "Usa com a fons 360°",
 "Paint with it": "Pinta-hi",
 "Place": "Col·loca",
-"Web page": "Pàgina web"
+"Web page": "Pàgina web",
+"Size: {size}": "Mida: {size}",
+"Heavy: it may take long to open and slow the drawing down. As a proxy only a light envelope stays in the drawing.": "Pesat: pot trigar a obrir-se i alentir el dibuix. Com a proxy només queda una envolupant lleugera al dibuix.",
+"Heavy download": "Descàrrega pesada",
+"«{name}» ({res}) is {size}. It can take long to download and open, and slow the drawing down. Download it anyway?": "«{name}» ({res}) fa {size}. Pot trigar a baixar-se i a obrir-se, i alentir el dibuix. El vols baixar igualment?",
+"Download of «{name}» cancelled.": "Descàrrega de «{name}» cancel·lada."
 }

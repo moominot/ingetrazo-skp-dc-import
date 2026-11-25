@@ -143,5 +143,10 @@
 "Use as 360° background": "Usar como fondo 360°",
 "Paint with it": "Pintar con él",
 "Place": "Colocar",
-"Web page": "Página web"
+"Web page": "Página web",
+"Size: {size}": "Tamaño: {size}",
+"Heavy: it may take long to open and slow the drawing down. As a proxy only a light envelope stays in the drawing.": "Pesado: puede tardar en abrirse y ralentizar el dibujo. Como proxy solo queda una envolvente ligera en el dibujo.",
+"Heavy download": "Descarga pesada",
+"«{name}» ({res}) is {size}. It can take long to download and open, and slow the drawing down. Download it anyway?": "«{name}» ({res}) ocupa {size}. Puede tardar en descargarse y abrirse, y ralentizar el dibujo. ¿Descargarlo igualmente?",
+"Download of «{name}» cancelled.": "Descarga de «{name}» cancelada."
 }

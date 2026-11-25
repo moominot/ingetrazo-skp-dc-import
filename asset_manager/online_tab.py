@@ -195,7 +195,19 @@ class OnlineTab(QWidget):
         def progress(i, n):
             panel._say(tr("Downloading «{name}» ({res})… {i}/{n}", name=e["name"], res=res.upper(), i=i, n=n))
 
+        def heavy(total):
+            from PySide6.QtWidgets import QMessageBox
+            from .catalog import size_text
+            return QMessageBox.question(
+                panel, tr("Heavy download"),
+                tr("«{name}» ({res}) is {size}. It can take long to download and open, and slow "
+                   "the drawing down. Download it anyway?", name=e["name"], res=res.upper(),
+                   size=size_text(total))) == QMessageBox.Yes
+
         def done(path, err):
+            if err == "cancelled":
+                panel._say(tr("Download of «{name}» cancelled.", name=e["name"]))
+                return
             if path is None:
                 panel._say(tr("Could not download «{name}»: {error}", name=e["name"], error=err))
                 return
@@ -206,4 +218,4 @@ class OnlineTab(QWidget):
                 _log.exception("could not use %s", path)
                 panel._say(tr("Could not use «{name}»: {error}", name=e["name"], error=exc))
 
-        src.download(kind, e, res, done, progress)
+        src.download(kind, e, res, done, progress, confirm=heavy)

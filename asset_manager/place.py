@@ -104,11 +104,7 @@ def proxy_from_file(viewport, path, confirm=None):
     groups = list(getattr(temp, "groups", ()) or ())
     if clean_layers(groups):
         _log.warning("%s: layer labels that were not names were dropped", path.name)
-    if len(groups) == 1 and getattr(groups[0], "xform", None) is not None:
-        g = groups[0]
-    else:
-        from core.insert import component_from_scene
-        g = component_from_scene(temp, path.stem)
+    g = component_of(temp, path)
     if g is None:
         return None, "proxy", False
     dynamic = proxy.has_dynamic(g)
@@ -124,6 +120,16 @@ def proxy_from_file(viewport, path, confirm=None):
     # The file's materials stay with the original: the drawing gets none
     # until the original is shown.
     return proxy.make(viewport, g, getattr(temp, "materials", {}) or {}, path), "proxy", dynamic
+
+
+def component_of(temp, path):
+    """The one component a model read into ``temp`` is made of (its only
+    group, or all of them gathered), or None when it has no geometry."""
+    groups = list(getattr(temp, "groups", ()) or ())
+    if len(groups) == 1 and getattr(groups[0], "xform", None) is not None:
+        return groups[0]
+    from core.insert import component_from_scene
+    return component_from_scene(temp, Path(path).stem)
 
 
 def read_file(viewport, path):
@@ -167,6 +173,26 @@ def read_file(viewport, path):
     if callable(end):
         end()
     return temp
+
+
+def materialize(info: dict) -> bool:
+    """Write the original file of a proxy that went in without one (a heavy
+    model, ``info["lazy"]``): its source file is read again and saved where
+    ``info["file"]`` says. True when the file is there afterwards. The render
+    calls this the first time it needs the full model."""
+    from . import proxy
+    src, dest = Path(info.get("source") or ""), Path(info.get("file") or "")
+    if not info.get("lazy") or not info.get("id") or not src.is_file() or not info.get("file"):
+        return dest.is_file()
+    if dest.is_file():
+        return True
+    temp = read_file(None, src)
+    clean_layers(list(getattr(temp, "groups", ()) or ()))
+    g = component_of(temp, src)
+    if g is None:
+        return False
+    proxy.write_original(dest, g, getattr(temp, "materials", {}) or {}, info["id"])
+    return dest.is_file()
 
 
 def copy_of(group):

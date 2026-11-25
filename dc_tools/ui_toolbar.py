@@ -30,6 +30,13 @@ def build(app, actions: dict) -> QToolBar | None:
         bar.addAction(act)
         if key in sep_after:
             bar.addSeparator()
+    flip = actions.get("flip_opening")
+    if flip is not None:
+        from .opening import flip_icon
+        flip.setIcon(flip_icon())
+        flip.setToolTip(tr("Flip the cut direction"))
+        bar.addSeparator()
+        bar.addAction(flip)
     window.addToolBar(bar)
     restore = getattr(app, "restore_toolbar_layout", None)
     if restore is not None:

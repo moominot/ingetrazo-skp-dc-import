@@ -9,7 +9,7 @@ import logging
 import time
 from pathlib import Path, PurePosixPath
 
-from . import online
+from . import catalog, online
 from .online import safe_target  # noqa: F401 - part of this module's API
 
 _log = logging.getLogger(__name__)
@@ -139,6 +139,24 @@ def files_for(kind: str, files: dict, res: str):
     raise ValueError(kind)
 
 
+def total_bytes(files: dict, todo) -> int:
+    """The bytes ``todo`` ([(relative path, url, md5), …]) takes, from the
+    sizes the files listing gives next to each url (0 when it gives none)."""
+    sizes: dict = {}
+
+    def walk(node):
+        if isinstance(node, dict):
+            if isinstance(node.get("url"), str) and isinstance(node.get("size"), (int, float)):
+                sizes[node["url"]] = int(node["size"])
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+    walk(files)
+    return sum(sizes.get(url, 0) for _r, url, _m in todo)
+
+
 def asset_dir(kind: str, aid: str, res: str) -> Path:
     return cache_root() / kind / online.safe_name(aid) / res
 
@@ -205,10 +223,11 @@ class Source:
     def forget_thumbs(self):
         self.client.forget_thumbs()
 
-    def download(self, kind: str, e: dict, res: str, done, progress=None):
+    def download(self, kind: str, e: dict, res: str, done, progress=None, confirm=None):
         """Fetch what ``kind`` needs of ``e`` at ``res`` into the cache;
         ``done(main file path or None, error)``. Files already there (same
-        checksum) are not fetched again."""
+        checksum) are not fetched again. ``confirm(bytes)`` is asked before a
+        download of ``HEAVY_BYTES`` or more; False cancels."""
         aid = e["id"]
         hit = cached_main(kind, aid, res)
         if hit is not None:
@@ -220,10 +239,15 @@ class Source:
                 done(None, err)
                 return
             try:
-                main, todo, maps = files_for(kind, json.loads(data.decode("utf-8")), res)
+                listing = json.loads(data.decode("utf-8"))
+                main, todo, maps = files_for(kind, listing, res)
                 bad = [url for _r, url, _m in todo if not allowed_url(url)]
                 if bad:
                     raise ValueError(f"a file outside Poly Haven: {bad[0]}")
+                total = total_bytes(listing, todo)
+                if confirm is not None and total >= catalog.HEAVY_BYTES and not confirm(total):
+                    done(None, "cancelled")
+                    return
                 root = asset_dir(kind, aid, res)
                 root.mkdir(parents=True, exist_ok=True)
                 plan = [(online.safe_target(root, rel), url, md5, 0) for rel, url, md5 in todo]

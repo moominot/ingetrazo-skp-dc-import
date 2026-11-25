@@ -112,7 +112,7 @@ def refresh_changed(viewport) -> list:
         src = files[path].get(pid)
         info = dict(proxy.info_of(fam[0]))
         info["mtime"] = proxy.file_date(path)          # not asked again for this date
-        mesh = proxy.envelope_mesh(proxy.points(src)) if src is not None else None
+        mesh = proxy.envelope_mesh(proxy.parts(src)) if src is not None else None
         if mesh is None:
             for g in fam:                               # the original is not in its file any more
                 ext = dict(g.ext or {})
@@ -226,7 +226,7 @@ def make_proxies(viewport, groups, confirm=None) -> int:
     items = []
     for fam in families:
         g0 = fam[0]
-        mesh = proxy.envelope_mesh(proxy.points(g0))
+        mesh = proxy.envelope_mesh(proxy.parts(g0))
         if mesh is None:
             continue
         pid = uuid.uuid4().hex[:16]
@@ -255,6 +255,22 @@ def _read(path: Path):
     return found, dict(getattr(sc, "materials", {}) or {})
 
 
+def _from_source(viewport, info):
+    """``(group, materials)`` of a proxy whose original was never written: the
+    model read again from its source file; ``(None, {})`` when it is gone."""
+    from . import place
+    src = Path(info.get("source") or "")
+    if not info.get("lazy") or not src.is_file():
+        return None, {}
+    try:
+        temp = place.read_file(viewport, src)
+        place.clean_layers(list(getattr(temp, "groups", ()) or ()))
+        return place.component_of(temp, src), dict(getattr(temp, "materials", {}) or {})
+    except Exception:  # noqa: BLE001 - said by the caller (not found)
+        _log.exception("could not read %s", src)
+        return None, {}
+
+
 def show_originals(viewport, groups) -> tuple[int, list]:
     """The full models of the proxies ``groups`` (and their copies) back from
     their files. Returns (how many definitions, names not found)."""
@@ -278,6 +294,8 @@ def show_originals(viewport, groups) -> tuple[int, list]:
                 files[path] = ({}, {})
         found, fmats = files.get(path, ({}, {}))
         src = found.get(info["id"])
+        if src is None and path is None:           # never written: from its source
+            src, fmats = _from_source(viewport, info)
         if src is None:
             missing.append(info.get("name") or g.name)
             continue
@@ -323,13 +341,14 @@ def show_proxies(viewport, groups) -> tuple[int, list]:
                 _log.exception("could not write %s", path)
                 failed.append(info.get("name") or g0.name)
                 continue
-        mesh = proxy.envelope_mesh(proxy.points(g0))
+        mesh = proxy.envelope_mesh(proxy.parts(g0))
         if mesh is None:
             failed.append(info.get("name") or g0.name)
             continue
         new = dict(info)
         new["state"] = "proxy"
         new.pop("serial", None)
+        new.pop("lazy", None)           # written just now, if it had to be
         new["faces"] = proxy.face_count(g0)
         new["proxy_faces"] = len(mesh.faces)
         new["mtime"] = proxy.file_date(proxy.original_file(new, viewport) or new.get("file") or "")

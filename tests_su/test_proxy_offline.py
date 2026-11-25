@@ -89,9 +89,21 @@ ok(not g.children and all(len(e.faces) == 2 for e in g.mesh.edges) and len(g.mes
 import numpy as np
 P_all = proxy.points(Group(box(1, 1, 2)))
 P_all = np.vstack([P_all, P_all[:0], np.array([[0.25, 0.25, 2.5], [0.75, 0.75, 2.5], [0.25, 0.75, 2.5], [0.75, 0.25, 2.5]])])
-out_by = max(float(np.dot(f.normal().toTuple(), p - np.array(f.loop[0].position.toTuple())))
-             for f in g.mesh.faces for p in P_all)
-ok(out_by < 1e-6, f"every corner of the model is inside the envelope (worst {out_by:.2e} m outside)")
+def inside(mesh, p):
+    """Ray test along +Z (a point just off any edge): odd crossings = inside."""
+    hits = 0
+    for f in mesh.faces:
+        A, B, C = [np.array(v.position.toTuple()) for v in f.loop[:3]]
+        M = np.array([B - A, C - A, [0, 0, -1.0]]).T
+        try:
+            u, v, t = np.linalg.solve(M, np.asarray(p, float) - A)
+        except np.linalg.LinAlgError:
+            continue
+        hits += (u >= 0 and v >= 0 and u + v <= 1 and t > 0)
+    return hits % 2 == 1
+P_all = [(0.31, 0.27, 1.0), (0.43, 0.52, 0.1), (0.7, 0.3, 1.9), (0.37, 0.41, 2.3), (0.61, 0.58, 2.1)]
+bad = [p for p in P_all if not inside(g.mesh, p)]
+ok(not bad, f"the model's inner points are inside the envelope (outside: {bad})")
 ok(sum(1 for e in g.mesh.edges if e.soft) > 0 and any(not e.soft for e in g.mesh.edges),
    "its gentle folds are soft, its sharp ones are not")
 ok(g.is_component() and g.xform.map(QVector3D(0, 0, 0)) == QVector3D(3, 0, 0),
@@ -138,6 +150,18 @@ g0, _k, _d = place.proxy_from_file(vp0, src)
 i0 = proxy.info_of(g0)
 ok(Path(i0["file"]).parent == Path(home) / "proxies" and i0["rel"] is None,
    "unsaved drawing: originals in the extension's folder, absolute path")
+
+# --- a model of parts: each part gets its own envelope -----------------------------
+top = Group(box(1, 1, 0.05, z=0.7), name="Taula"); top.xform = QMatrix4x4()
+top.children = []
+for x, y in ((0, 0), (0.9, 0), (0, 0.9), (0.9, 0.9)):
+    leg = Group(box(0.1, 0.1, 0.7), name="Pota"); lx = QMatrix4x4(); lx.translate(QVector3D(x, y, 0)); leg.xform = lx
+    top.children.append(leg)
+one = proxy.envelope_mesh(proxy.points(top)); many = proxy.envelope_mesh(proxy.parts(top))
+ok(len(proxy.parts(top)) == 5, "a table: its top and four legs are five parts")
+ok(inside(one, (0.43, 0.52, 0.3)) and not inside(many, (0.43, 0.52, 0.3)),
+   "the space under the table is empty in the parts' envelope (filled by a single hull)")
+ok(inside(many, (0.03, 0.06, 0.3)) and inside(many, (0.43, 0.52, 0.72)), "the legs and the top are wrapped")
 
 # --- flat and empty models ----------------------------------------------------------
 m = Mesh(); m.add_face([QVector3D(0,0,0), QVector3D(2,0,0), QVector3D(2,1,0), QVector3D(0,1,0)])
@@ -186,6 +210,34 @@ if PROXIES:
     pt.show_proxies(vp)
     ok(not g.children and proxy.info_of(g)["state"] == "proxy" and faces(g) != 12,
        f"Proxies: Show Proxies swaps a stand-in back ({len(g.mesh.faces)} faces, its own hull)")
+
+# --- a heavy model: its original is not written until it is needed --------------------
+from asset_manager import proxy_ops
+vp3 = VP(work / "lazy" / "casa.igz"); (work / "lazy").mkdir()
+src3 = model_file("Fulla")
+proxy.LAZY_FACES = 3
+g3, kind3, _d = place.proxy_from_file(vp3, src3)
+i3 = proxy.info_of(g3)
+ok(kind3 == "proxy" and i3.get("lazy") and not Path(i3["file"]).exists() and not i3["mtime"],
+   "a heavy model: proxy inserted, its original file not written")
+vp3.scene.groups.append(g3)
+n3, missing3 = proxy_ops.show_originals(vp3, [g3])
+ok(n3 == 1 and not missing3 and faces(g3) == proxy.info_of(g3)["faces"] == 12 and proxy.info_of(g3)["state"] == "original",
+   "Show original reads it again from its source file")
+n3, failed3 = proxy_ops.show_proxies(vp3, [g3])
+i3 = proxy.info_of(g3)
+ok(n3 == 1 and not failed3 and i3["state"] == "proxy" and not i3.get("lazy") and Path(i3["file"]).is_file(),
+   "Show proxy writes the original then")
+proxy.LAZY_FACES = 3
+src4 = model_file("Fulla2")
+g4, _k, _d = place.proxy_from_file(vp3, src4)
+i4 = dict(proxy.info_of(g4))
+ok(i4.get("lazy") and not Path(i4["file"]).exists(), "a second heavy model: no original yet")
+ok(place.materialize(i4) and Path(i4["file"]).is_file(), "materialize: the render's first need writes it from the source")
+chk = Scene(); igz.load_into(chk, Path(i4["file"]))
+ok(len(chk.groups) == 1 and (proxy.info_of(chk.groups[0]) or {}).get("id") == i4["id"]
+   and faces(chk.groups[0]) == i4["faces"], "and it holds the full model, tagged with the proxy id")
+proxy.LAZY_FACES = 200_000
 
 print("ALL OK" if not fails else f"{len(fails)} FAILED")
 sys.exit(1 if fails else 0)
