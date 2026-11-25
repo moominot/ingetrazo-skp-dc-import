@@ -264,7 +264,13 @@ ok(sorted((i.name, i.kind, i.member) for i in zitems) == [("Cadira", "skp", "mod
                                                           ("Tiles", "material", None)],
    "a zip's model and material set, and a folder's material set, are listed")
 cad = next(i for i in zitems if i.name == "Cadira")
-ok(cad.label.startswith("Cadira  ·  skp (zip)") and catalog.preview_bytes(cad) == png, "a .skp in a zip shows its own preview")
+ok(cad.label == f"Cadira  ·  skp (zip)  ·  {catalog.size_text(len(skp_bytes))}" and catalog.preview_bytes(cad) == png,
+   "a .skp in a zip shows its own preview, and its size")
+ok(cad.size == len(skp_bytes) and not cad.heavy, "its size is the member's, and it is not heavy")
+oak = next(i for i in zitems if i.name == "Oak")
+ok(oak.size == len(b"colour") + len(b"normal") + len(b"rough"), "a material set's size adds up its maps")
+big = catalog.Item("Arbre", pathlib.Path("a.igz"), None, size=catalog.HEAVY_BYTES)
+ok(big.heavy and big.label.startswith(catalog.HEAVY_MARK) and "100 MB" in big.label, "a model of 100 MB or more is marked heavy")
 out = catalog.extract(cad)
 ok(out.read_bytes() == skp_bytes and pathlib.Path(home) in out.parents, "the model is taken out of the zip into the extension's folder")
 oak = next(i for i in zitems if i.name == "Oak")
