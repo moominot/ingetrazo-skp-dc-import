@@ -149,5 +149,7 @@
 "Cut plane…": "Plano de corte…",
 "The side of the component that is flush with the wall:": "El lado del componente que queda a ras de la pared:",
 "Choose the side of the selected window or door that is flush with the wall; it then cuts its hole there.": "Elige el lado de la ventana o puerta seleccionada que queda a ras de la pared; allí hace el hueco.",
-" — not dynamic yet: add an attribute and it becomes dynamic.": " — aún no es dinámico: añade un atributo y lo será."
+" — not dynamic yet: add an attribute and it becomes dynamic.": " — aún no es dinámico: añade un atributo y lo será.",
+"That side of the component has no area to cut with: choose another side": "Ese lado del componente no tiene superficie con la que cortar: elige otro",
+"No wall face under that side: place it against a wall, whole within its face": "No hay ninguna cara de pared bajo ese lado: ponlo contra una pared, entero dentro de la cara"
 }
