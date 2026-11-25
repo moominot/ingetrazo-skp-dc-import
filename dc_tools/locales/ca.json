@@ -149,5 +149,7 @@
 "Cut plane…": "Pla de tall…",
 "The side of the component that is flush with the wall:": "El costat del component que és a ras de la paret:",
 "Choose the side of the selected window or door that is flush with the wall; it then cuts its hole there.": "Tria el costat de la finestra o porta seleccionada que és a ras de la paret; hi fa el forat.",
-" — not dynamic yet: add an attribute and it becomes dynamic.": " — encara no és dinàmic: afegeix un atribut i ho serà."
+" — not dynamic yet: add an attribute and it becomes dynamic.": " — encara no és dinàmic: afegeix un atribut i ho serà.",
+"That side of the component has no area to cut with: choose another side": "Aquest costat del component no té superfície per tallar: tria'n un altre",
+"No wall face under that side: place it against a wall, whole within its face": "No hi ha cap cara de paret sota aquest costat: posa'l contra una paret, sencer dins la cara"
 }

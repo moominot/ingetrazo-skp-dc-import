@@ -76,9 +76,16 @@ def _distance_out(group, n) -> float:
     return max((QVector3D.dotProduct(p, nv) for p in pts), default=0.0)
 
 
+#: (group, depth) tried in place of the plane's own, while a wall is searched.
+_TRY: list = []
+
+
 def plane_of(group):
     """``(n, d)`` — the normal out of the wall (component axes) and the
     plane's distance along it — or None for the core's own ``z = 0``."""
+    for g, depth_plane in _TRY:
+        if g is group:
+            return depth_plane
     p = _entry(group).get("plane")
     if isinstance(p, dict) and isinstance(p.get("n"), (list, tuple)):
         return tuple(float(c) for c in p["n"]), float(p.get("d", 0.0))
@@ -165,6 +172,56 @@ def footprint(group):
     return [frame.map(p) for p in flat]
 
 
+# ---- where along that side the wall is ---------------------------------------
+
+def _depths(group, n, d) -> list:
+    """The depths along ``n`` the wall's face may be at, the likeliest first:
+    the stored one, the component's own origin, then every level its corners
+    lie on, from the outermost in. A window rarely ends flat on the wall: a
+    sill, a trim or a handle sticks out a few millimetres past the face it
+    was drawn against."""
+    from PySide6.QtGui import QVector3D
+    nv = QVector3D(*n)
+    levels = sorted({round(QVector3D.dotProduct(p, nv), 5)
+                     for p in _local_points(group)}, reverse=True)
+    out = []
+    for depth in [0.0] + levels:
+        inside = bool(levels) and levels[-1] - _EPS <= depth <= levels[0] + _EPS
+        if inside and abs(depth - d) > _EPS and all(abs(depth - x) > _EPS for x in out):
+            out.append(depth)
+    return out
+
+
+def find_host(scene, group):
+    """``core.openings.find_host``, trying every depth of the chosen side
+    (:func:`_depths`) until one lies on a wall's face."""
+    o = _core()
+    found = o._find_host_core(scene, group)
+    plane = plane_of(group)
+    if found[0] is not None or plane is None:
+        return found
+    n, d = plane
+    for depth in _depths(group, n, d):
+        _TRY.append((group, (n, depth)))
+        try:
+            found = o._find_host_core(scene, group)
+        finally:
+            _TRY.pop()
+        # Only from the wall's outer side: a face looking the other way is
+        # reached from inside the wall, and only its skin would be cut.
+        if found[0] is not None and _looks_out(o, *found):
+            return found
+    return None, None
+
+
+def _looks_out(o, host, prism) -> bool:
+    from PySide6.QtGui import QVector3D
+    face = o._host_face(host.mesh, prism["a"])
+    return face is not None and (
+        QVector3D.dotProduct(face.normal(), o._normal(prism["a"])) > 0
+        or prism.get("b") is not None)
+
+
 def install() -> None:
     """Put :func:`footprint` in place of the core's (once; the core's own
     stays as ``_footprint_core``, for a component with no plane)."""
@@ -172,6 +229,9 @@ def install() -> None:
     if not hasattr(o, "_footprint_core"):
         o._footprint_core = o.footprint
     o.footprint = footprint
+    if not hasattr(o, "_find_host_core"):
+        o._find_host_core = o.find_host
+    o.find_host = find_host
 
 
 def uninstall() -> None:
@@ -179,6 +239,9 @@ def uninstall() -> None:
     if hasattr(o, "_footprint_core"):
         o.footprint = o._footprint_core
         del o._footprint_core
+    if hasattr(o, "_find_host_core"):
+        o.find_host = o._find_host_core
+        del o._find_host_core
 
 
 # ---- changing the plane ------------------------------------------------------
@@ -224,7 +287,21 @@ def set_side(viewport, group, side: str):
     targets = _core().siblings(viewport.scene, group)
     planes = [(n, _distance_out(g, n)) for g in targets]
     viewport.history.execute(_command(targets, planes))
+    _report(viewport, targets)
     viewport.update()
+
+
+def _report(viewport, targets) -> None:
+    """Say why nothing was cut, when nothing was."""
+    from .i18n import tr
+    o = _core()
+    flash = getattr(viewport, "flash_status", None)
+    if flash is None or any((o.made(g) or {}).get("a") for g in targets):
+        return
+    if all(o.footprint(g) is None for g in targets):
+        flash(tr("That side of the component has no area to cut with: choose another side"), 8000)
+    else:
+        flash(tr("No wall face under that side: place it against a wall, whole within its face"), 8000)
 
 
 def flip(viewport, group):
@@ -250,6 +327,20 @@ def selected_cutters(scene):
     return out
 
 
+def _where_cut(group):
+    """The footprint at the depth the hole was cut at, when it was found away
+    from the side's own depth; None otherwise."""
+    from PySide6.QtGui import QVector3D
+    o = _core()
+    rec = o.made(group)
+    plane = plane_of(group)
+    if not rec or not rec.get("a") or plane is None:
+        return None
+    if rec.get("host") is not None:      # kept in the wall's own frame
+        return None
+    return [QVector3D(*p) for p in rec["a"]]
+
+
 def draw_arrow(app, viewport, painter) -> None:
     """Over each selected window or door: an arrow from the middle of its wall
     side into the wall, the way its hole is cut."""
@@ -258,7 +349,7 @@ def draw_arrow(app, viewport, painter) -> None:
     from .i18n import tr
     o = _core()
     for g in selected_cutters(viewport.scene):
-        fp = o.footprint(g)
+        fp = _where_cut(g) or o.footprint(g)
         if not fp:
             continue
         n = o._normal(fp)

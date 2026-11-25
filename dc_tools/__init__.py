@@ -11,7 +11,7 @@ a separate extension. This one needs neither OpenSKP nor any .skp file.
 """
 from __future__ import annotations
 
-__version__ = "0.3.8"
+__version__ = "0.3.9"
 
 import logging
 

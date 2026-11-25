@@ -170,7 +170,7 @@ The five tabs of the Library, in order (the panel is named «Biblioteca» in Cat
 </tr>
 </table>
 
-Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.1, dc_tools 0.3.8, asset_manager 0.7.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.1, dc_tools 0.3.9, asset_manager 0.7.1, for IngeTrazo 0.6 (Extension API 2).
 
 **Languages.** The three extensions speak every language IngeTrazo does: English, Español, Català, Português (Brasil), 简体中文, 正體中文, Italiano, Bahasa Indonesia, Français, Deutsch, Polski, Русский, Tiếng Việt, ລາວ, ไทย, 日本語, 한국어, Українська, العربية, Български and Türkçe. They follow the language chosen in IngeTrazo; a text without a translation shows in English.
 
