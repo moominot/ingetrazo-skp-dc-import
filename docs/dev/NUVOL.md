@@ -18,7 +18,7 @@ git -C ../ingetrazo checkout v0.6.3.2        # la versió amb què s'ha provat
 pip install PySide6 numpy pillow             # Python 3.12
 ```
 
-En un Linux sense pantalla, Qt pot demanar paquets del sistema (`libegl1 libgl1 libxkbcommon0 libfontconfig1`). **No s'ha comprovat en Linux:** tot s'ha provat a Windows.
+En un Linux sense pantalla, Qt pot demanar paquets del sistema (`libegl1 libgl1 libxkbcommon0 libfontconfig1 fonts-dejavu-core`). **No s'ha comprovat en Linux:** tot s'ha provat a Windows.
 
 ## Proves
 
@@ -37,7 +37,7 @@ bash tools/run_offline_tests.sh ../ingetrazo
 L'usuari sovint no és davant l'ordinador i **vol captures**. Sense el programa real es poden fer del tauler, fora de pantalla (només al repositori de Render Studio):
 
 ```bash
-python tools/panel_shots.py ../ingetrazo . sortida.png tools/shots_example.py
+QT_QPA_PLATFORM=offscreen python tools/panel_shots.py ../ingetrazo . sortida.png tools/shots_example.py
 ```
 
 Digueu sempre si una captura és de dins o de fora del programa.
