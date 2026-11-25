@@ -669,6 +669,16 @@ class AssetPanel(QWidget):
 
     @staticmethod
     def _item_tip(item) -> str:
+        tip = AssetPanel._tip_base(item)
+        if item.size:
+            tip += "\n" + tr("Size: {size}", size=catalog.size_text(item.size))
+        if item.heavy:
+            tip += "\n" + tr("Heavy: it may take long to open and slow the drawing down. "
+                             "As a proxy only a light envelope stays in the drawing.")
+        return tip
+
+    @staticmethod
+    def _tip_base(item) -> str:
         where = str(item.path) + (f"\n› {item.member}" if item.member else "")
         if item.scene_mat is not None:
             m = item.scene_mat

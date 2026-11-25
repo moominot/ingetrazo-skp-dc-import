@@ -38,6 +38,10 @@ PARAMS = {"type": "hull", "hull_points": 64, "color": [0.95, 0.55, 0.15], "see_t
 #: Edges between envelope faces flatter than this are soft (a smooth surface).
 SOFT_DEG = 30.0
 FOLDER_SUFFIX = "_proxies"
+#: A model with more faces than this is not written to its original file when
+#: it goes in as a proxy (minutes for a tree of leaves): it is read again from
+#: its source file at Show original, and written then if it is needed.
+LAZY_FACES = 200_000
 
 
 # --- what is a proxy ----------------------------------------------------------
@@ -161,6 +165,85 @@ def points(group):
     return np.vstack(out) if out else np.zeros((0, 3))
 
 
+def islands(mesh):
+    """The vertices of ``mesh`` grouped by the pieces of surface that touch
+    (faces sharing a vertex), as a list of ``(n, 3)`` arrays."""
+    import numpy as np
+    index = {id(v): n for n, v in enumerate(mesh.vertices)}
+    if not index:
+        return []
+    root = list(range(len(index)))
+
+    def find(a):
+        while root[a] != a:
+            root[a] = root[root[a]]
+            a = root[a]
+        return a
+    for f in mesh.faces:
+        ids = [index[id(v)] for v in f.loop if id(v) in index]
+        for b in ids[1:]:
+            root[find(b)] = find(ids[0])
+    used = {find(index[id(v)]) for f in mesh.faces for v in f.loop[:1] if id(v) in index}
+    groups: dict = {}
+    for v in mesh.vertices:
+        r = find(index[id(v)])
+        if r in used:
+            groups.setdefault(r, []).append(v.position.toTuple())
+    return [np.array(g, dtype=np.float64).reshape(-1, 3) for g in groups.values()]
+
+
+#: Past this many faces a model is wrapped as a whole (one hull): splitting it
+#: in pieces walks every face in Python, too slow for a tree of leaves.
+SPLIT_FACES = 8000
+
+
+def parts(group, limit: int = 6):
+    """The points of ``group`` split by what it is made of: each separate piece
+    of its own surface and each direct sub-component, as a list of ``(n, 3)`` arrays in the group's
+    axes. One wrapped envelope per part follows the model much closer than a
+    single hull (a table's legs are not filled in). A single array when there
+    is nothing to split. More than ``limit`` parts are merged (the small ones
+    into their nearest big one)."""
+    import numpy as np
+
+    from core.group import np_affine
+    if face_count(group) > SPLIT_FACES:
+        whole = points(group)
+        return [whole] if len(whole) else []
+    out = []
+    out.extend(a for a in islands(group.mesh) if len(a))
+    for ch in getattr(group, "children", None) or ():
+        P = points(ch)
+        if not len(P):
+            continue
+        xf = getattr(ch, "xform", None)
+        if xf is not None:
+            rot, tr = np_affine(xf)
+            P = P @ rot.T + tr
+        out.append(P)
+    if not out:
+        return []
+    if len(out) > limit:
+        out = _merge_small(out, limit)
+    return out
+
+
+def _merge_small(sets, limit: int):
+    """At most ``limit`` point sets: the biggest (by the size of their box)
+    stay, every other joins the nearest of them, so the envelope stays light
+    (a few hulls, not one per screw)."""
+    import numpy as np
+    size = np.array([float(np.linalg.norm(a.max(axis=0) - a.min(axis=0))) for a in sets])
+    order = np.argsort(-size)
+    seeds = [sets[i] for i in order[:limit]]
+    centres = np.array([(a.min(axis=0) + a.max(axis=0)) / 2 for a in seeds])
+    joined = [[a] for a in seeds]
+    for i in order[limit:]:
+        c = (sets[i].min(axis=0) + sets[i].max(axis=0)) / 2
+        joined[int(np.argmin(np.linalg.norm(centres - c, axis=1)))].append(sets[i])
+    return [np.vstack(j) for j in joined]
+
+
 def bounds(group):
     """``(lo, hi)`` of everything in ``group`` in its own axes, or None when
     it has no vertices."""
@@ -247,27 +330,36 @@ def hull(P):
 def envelope_mesh(P, colour=None, k: int = PARAMS["hull_points"]):
     """A mesh: the convex envelope of the points ``P`` through about ``k`` of
     the outermost ones, its gentle folds soft; the box when the points are
-    flat. None when there is nothing to wrap."""
+    flat. ``P`` may also be a list of point arrays (see :func:`parts`): each
+    gets its own envelope, in one mesh. None when there is nothing to wrap."""
     import math
 
+    import numpy as np
     from PySide6.QtGui import QVector3D
 
     from core.mesh import Mesh
-    if not len(P):
+    sets = [np.asarray(a, dtype=np.float64) for a in P] if isinstance(P, (list, tuple)) else [P]
+    sets = [a for a in sets if len(a)]
+    if not sets:
         return None
-    got = hull(outermost(P, k))
-    if got is None:
-        return box_mesh(P.min(axis=0), P.max(axis=0), colour)
-    V, tris = got
+    kk = k if len(sets) == 1 else 20      # several parts: lighter each
     colour = tuple(list(colour or PARAMS["color"])[:3] + [1.0])
     mesh = Mesh()
-    for i, j, m in tris:
-        try:
-            f = mesh.add_face([QVector3D(*V[i]), QVector3D(*V[j]), QVector3D(*V[m])])
-        except Exception:  # noqa: BLE001 - a sliver too thin to be a face
+    for a in sets:
+        got = hull(outermost(a, kk))
+        if got is None:
+            box_mesh(a.min(axis=0), a.max(axis=0), colour, mesh)
             continue
-        if f is not None:
-            f.attrs["color"] = colour
+        V, tris = got
+        for i, j, m in tris:
+            try:
+                f = mesh.add_face([QVector3D(*V[i]), QVector3D(*V[j]), QVector3D(*V[m])])
+            except Exception:  # noqa: BLE001 - a sliver too thin to be a face
+                continue
+            if f is not None:
+                f.attrs["color"] = colour
+    if not mesh.faces:
+        return None
     lim = math.cos(math.radians(SOFT_DEG))
     normals: dict = {}
     for e in mesh.edges:
@@ -283,9 +375,10 @@ def envelope_mesh(P, colour=None, k: int = PARAMS["hull_points"]):
 # --- the box ----------------------------------------------------------------------
 
 
-def box_mesh(lo, hi, colour=None):
+def box_mesh(lo, hi, colour=None, mesh=None):
     """A mesh: the box from ``lo`` to ``hi`` (6 faces, outward), a single
-    rectangle when it is flat. None when it is a line or a point."""
+    rectangle when it is flat. None when it is a line or a point. With ``mesh``,
+    the faces are added to it (and it is returned)."""
     from PySide6.QtGui import QVector3D
 
     from core.mesh import Mesh
@@ -293,13 +386,13 @@ def box_mesh(lo, hi, colour=None):
     size = [float(hi[i] - lo[i]) for i in range(3)]
     tiny = 1e-6 * (max(size) or 1.0)
     flat = [s <= tiny for s in size]
-    mesh = Mesh()
+    mesh = Mesh() if mesh is None else mesh
 
     def corner(x, y, z):
         return QVector3D(float((lo, hi)[x][0]), float((lo, hi)[y][1]), float((lo, hi)[z][2]))
 
     if sum(flat) >= 2:
-        return None
+        return None if mesh is None or not mesh.faces else mesh
     if sum(flat) == 1:
         k = flat.index(True)
         u, v = [i for i in range(3) if i != k]
@@ -385,11 +478,14 @@ def make(viewport, group, materials: dict, source) -> object:
     from core.group import Group
     from core.insert import ensure_layers
     pid = proxy_id(source)
-    mesh = envelope_mesh(points(group))
+    mesh = envelope_mesh(parts(group))
     if mesh is None:
         raise RuntimeError("the model is too thin for a proxy")
     path = originals_folder(viewport) / f"{_safe(group.name)}_{pid[:6]}.igz"
-    write_original(path, group, materials, pid)
+    faces = face_count(group)
+    lazy = faces > LAZY_FACES and Path(source).is_file()
+    if not lazy:
+        write_original(path, group, materials, pid)
     g = Group(mesh, name=group.name)
     g.xform = QMatrix4x4(group.xform) if getattr(group, "xform", None) is not None else QMatrix4x4()
     g.component = True
@@ -397,8 +493,10 @@ def make(viewport, group, materials: dict, source) -> object:
     g.material = getattr(group, "material", None)
     g.ext = {KEY: {
         "id": pid, "file": str(path), "rel": _relative(path, viewport), "state": "proxy",
-        "faces": face_count(group), "proxy_faces": len(mesh.faces), "local": True,
+        "faces": faces, "proxy_faces": len(mesh.faces), "local": True,
         "name": group.name, "params": dict(PARAMS), "source": str(source),
-        "dynamic": has_dynamic(group), "mtime": file_date(path)}}
+        "dynamic": has_dynamic(group), "mtime": 0 if lazy else file_date(path)}}
+    if lazy:
+        g.ext[KEY]["lazy"] = True          # the original file does not exist yet
     ensure_layers(viewport.scene, g)
     return g

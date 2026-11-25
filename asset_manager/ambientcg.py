@@ -239,7 +239,7 @@ class Source:
     def forget_thumbs(self):
         self.client.forget_thumbs()
 
-    def download(self, kind: str, e: dict, res: str, done, progress=None):
+    def download(self, kind: str, e: dict, res: str, done, progress=None, confirm=None):
         aid = e["id"]
         root = asset_dir(aid, res, kind)
         hit = online.cached_main(root)

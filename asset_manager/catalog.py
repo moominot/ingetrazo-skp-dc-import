@@ -29,6 +29,21 @@ _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _SKP_HEAD = 512 * 1024           # the preview sits in the first bytes
 
 
+#: A model or texture set of this many bytes or more is flagged as heavy.
+HEAVY_BYTES = 100 * 1024 * 1024
+HEAVY_MARK = "⚠ "
+
+
+def size_text(n: int) -> str:
+    """``n`` bytes as KB / MB / GB, for a label."""
+    n = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f} {unit}" if unit in ("B", "KB") else f"{n:.1f} {unit}".replace(".0 ", " ")
+        n /= 1024
+    return ""
+
+
 @dataclass
 class Item:
     name: str
@@ -39,6 +54,11 @@ class Item:
     maps: dict | None = None        # a material: key -> file name (or zip member)
     spec: dict | None = None        # a material kept with a manifest (.pbr.json): its content
     scene_mat: object | None = None  # a material of the open drawing (core.materials.Material)
+    size: int = 0                   # bytes of the file(s) it takes; 0 = not known
+
+    @property
+    def heavy(self) -> bool:
+        return self.size >= HEAVY_BYTES
 
     @property
     def is_material(self) -> bool:
@@ -77,7 +97,8 @@ class Item:
     def label(self) -> str:
         where = (" (zip)" if self.path.suffix.lower() == ".zip" else
                  " (drawing)" if self.scene_mat is not None else "")
-        return f"{self.name}  ·  {self.kind}{where}"
+        weight = f"  ·  {size_text(self.size)}" if self.size else ""
+        return f"{HEAVY_MARK if self.heavy else ''}{self.name}  ·  {self.kind}{where}{weight}"
 
 
 def home() -> Path:
@@ -258,7 +279,8 @@ def _zip_items(p: Path, root: Path) -> list[Item]:
     from . import materials
     try:
         with zipfile.ZipFile(p) as z:
-            names = [n for n in z.namelist() if not n.endswith("/")]
+            sizes = {i.filename: i.file_size for i in z.infolist() if not i.filename.endswith("/")}
+            names = list(sizes)
     except (OSError, zipfile.BadZipFile, RuntimeError, ValueError):
         return []
     if len(names) > MAX_ZIP_MEMBERS:
@@ -268,14 +290,15 @@ def _zip_items(p: Path, root: Path) -> list[Item]:
     for n in names:
         if n.lower().endswith(MODEL_SUFFIXES):
             stem = Path(n.replace("\\", "/").split("/")[-1]).stem
-            out.append(Item(stem, p, None, root, member=n))
+            out.append(Item(stem, p, None, root, member=n, size=sizes.get(n, 0)))
     by_dir: dict = {}
     for n in names:
         by_dir.setdefault(n.rsplit("/", 1)[0] if "/" in n else "", []).append(n)
     for _d, group in sorted(by_dir.items()):
         for maps in materials.find_sets(group):
             name = materials.set_name(maps["color"].split("/")[-1], p.stem)
-            out.append(Item(name, p, None, root, maps=maps))
+            out.append(Item(name, p, None, root, maps=maps,
+                            size=sum(sizes.get(m, 0) for m in maps.values())))
     return out
 
 
@@ -482,8 +505,16 @@ def _manifest_items(d: Path, files, root: Path) -> tuple[list[Item], set]:
         if color is None and isinstance(spec.get("preview"), str) and (d / spec["preview"]).is_file():
             color = d / spec["preview"]          # a plain colour: the picture saved with it
             used.add(spec["preview"])
-        items.append(Item(name, d / fn, color, root, maps=maps or None, spec=spec))
+        items.append(Item(name, d / fn, color, root, maps=maps or None, spec=spec,
+                          size=sum(_file_size(d / m) for m in (maps or {}).values())))
     return items, used
+
+
+def _file_size(p: Path) -> int:
+    try:
+        return p.stat().st_size
+    except OSError:
+        return 0
 
 
 def scan(folder: Path | None = None) -> list[Item]:
@@ -518,13 +549,14 @@ def scan(folder: Path | None = None) -> list[Item]:
                         continue
                     prev = next((p.with_suffix(s) for s in PREVIEW_SUFFIXES
                                  if p.with_suffix(s).is_file()), None)
-                    found.append(Item(p.stem, p, prev, root))
+                    found.append(Item(p.stem, p, prev, root, size=_file_size(p)))
                 elif suffix == ".zip":
                     found += _zip_items(p, root)
             for maps in loose:
                 color = d / maps["color"]
                 found.append(Item(materials.set_name(maps["color"], d.name), color, color,
-                                  root, maps=maps))
+                                  root, maps=maps,
+                                  size=sum(_file_size(d / m) for m in maps.values())))
         items += found
     return sorted(items, key=lambda i: (i.name.lower(), i.key.lower()))
 

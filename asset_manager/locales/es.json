@@ -169,5 +169,10 @@
 "Show only one kind of thing": "Muestra solo un tipo de recurso",
 "Choose a material «(drawing)» in the list first.": "Elige primero un material «(dibujo)» de la lista.",
 "Keep the chosen material «(drawing)» in your catalog (its image, or a simple picture of its colour, plus translucency and finish)": "Guarda en el catálogo el material elegido «(dibujo)» (su imagen, o un dibujo sencillo del color, más translucidez y acabado)",
-"The chosen model follows the cursor, a click places it; a material loads the paint bucket; a background becomes the 360° background": "El modelo elegido sigue el cursor y un clic lo coloca; un material carga el bote de pintura; un fondo pasa a ser el fondo de 360°"
+"The chosen model follows the cursor, a click places it; a material loads the paint bucket; a background becomes the 360° background": "El modelo elegido sigue el cursor y un clic lo coloca; un material carga el bote de pintura; un fondo pasa a ser el fondo de 360°",
+"Size: {size}": "Tamaño: {size}",
+"Heavy: it may take long to open and slow the drawing down. As a proxy only a light envelope stays in the drawing.": "Pesado: puede tardar en abrirse y ralentizar el dibujo. Como proxy solo queda una envolvente ligera en el dibujo.",
+"Heavy download": "Descarga pesada",
+"«{name}» ({res}) is {size}. It can take long to download and open, and slow the drawing down. Download it anyway?": "«{name}» ({res}) ocupa {size}. Puede tardar en descargarse y abrirse, y ralentizar el dibujo. ¿Descargarlo igualmente?",
+"Download of «{name}» cancelled.": "Descarga de «{name}» cancelada."
 }

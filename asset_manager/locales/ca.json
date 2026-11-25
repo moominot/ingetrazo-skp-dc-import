@@ -169,5 +169,10 @@
 "Show only one kind of thing": "Mostra només un tipus de recurs",
 "Choose a material «(drawing)» in the list first.": "Tria primer un material «(dibuix)» de la llista.",
 "Keep the chosen material «(drawing)» in your catalog (its image, or a simple picture of its colour, plus translucency and finish)": "Desa al catàleg el material triat «(dibuix)» (la seva imatge, o un dibuix senzill del color, més translucidesa i acabat)",
-"The chosen model follows the cursor, a click places it; a material loads the paint bucket; a background becomes the 360° background": "El model triat segueix el cursor i un clic el col·loca; un material carrega el pot de pintura; un fons passa a ser el fons de 360°"
+"The chosen model follows the cursor, a click places it; a material loads the paint bucket; a background becomes the 360° background": "El model triat segueix el cursor i un clic el col·loca; un material carrega el pot de pintura; un fons passa a ser el fons de 360°",
+"Size: {size}": "Mida: {size}",
+"Heavy: it may take long to open and slow the drawing down. As a proxy only a light envelope stays in the drawing.": "Pesat: pot trigar a obrir-se i alentir el dibuix. Com a proxy només queda una envolupant lleugera al dibuix.",
+"Heavy download": "Descàrrega pesada",
+"«{name}» ({res}) is {size}. It can take long to download and open, and slow the drawing down. Download it anyway?": "«{name}» ({res}) fa {size}. Pot trigar a baixar-se i a obrir-se, i alentir el dibuix. El vols baixar igualment?",
+"Download of «{name}» cancelled.": "Descàrrega de «{name}» cancel·lada."
 }
