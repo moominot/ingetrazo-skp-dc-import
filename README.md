@@ -8,7 +8,7 @@ install independently:
 |---|---|---|
 | **SketchUp files** | `skp_dc_import/` | Import a `.skp` keeping its component tree and its Dynamic Components data; export the document as a `.skp`. Carries OpenSKP; the export needs a blank `.skp` (see below). |
 | **Dynamic components** | `dc_tools/` | Component Options, Component Attributes and the formula engine. Needs no `.skp` file and no OpenSKP. |
-| **Library** | `asset_manager/` | A tray tab (named «Biblioteca» in Catalan): the components in the drawing (preview, count, ⚙ on dynamic ones, select every instance, drag a copy onto the view), your own catalog folders (`.igz` and `.skp`, with previews) and the drawing's materials listed beside the catalog's (type filter; **Save to catalog** keeps them as IngeTrazo's own `.igmat` files; `.igmat` files, Render Studio's and IngeTrazo's, SketchUp's `.skm` material files and Render Studio's older `.rsmat` files are read), and free online assets (Poly Haven, ambientCG: HDRIs, full PBR materials, 3-D models) that **Save to catalog** keeps offline; heavy models as light **proxies** (an envelope in the drawing, the full model in an `.igz` of its own and in the render). |
+| **Render Studio Library** | `asset_manager/` | A tray tab with the **models**, **materials** and 360° **backgrounds** to render with, from the drawing, your own catalog folders and free online sites (Poly Haven, ambientCG): categories, **Save to catalog**, **Export**, and heavy models as light **proxies**. |
 
 None imports another. Installed together, you can import a `.skp`, edit its dynamic
 components and export it back.
@@ -68,24 +68,31 @@ components and export it back.
 A good companion of **Render Studio**: the models, materials and backgrounds to render with, in one place. It works on its own too.
 (Its folder and identifier stay `asset_manager`, so settings, catalog folders and updates carry on.)
 
-- **In drawing**: every component of the document once, with a preview and how many there are
-  (the parts inside a dynamic component are not listed). **Select all** selects every instance
-  that can be selected where you are editing and says how many are inside other groups; the
-  same from the view's right-click menu, **Select all instances of «…»**. **Place copy**, or
-  dragging an entry onto the view, places another instance of it.
-- **My catalog**: folders of your own **models** (`.igz`, `.skp`, `.gltf`, `.glb`), **materials** and 360° **backgrounds**
-  (`.hdr`, `.exr`), all in one list with a **type filter** (all types, models, materials, backgrounds) and a search by
-  name; add folders with **+**. A `.skp`
-  shows the preview it carries; any model can have a `.png` with the same name next to it.
-  Double-click, **Insert** or drag onto the view; a `.skp` comes in keeping its components and
-  dynamic data when the `skp_dc_import` extension is installed. When you add a folder you choose
-  whether it is **watched in real time** (a model saved or downloaded into it shows at once,
-  marked ●) or read again with **Update**. Downloads as they come are understood too: a `.skp`
-  or `.igz` **inside a `.zip`** is listed and taken out only when inserted, and a **material
-  set** downloaded from any site — a folder or zip with a colour image and its maps (normal,
-  roughness, AO, displacement…, recognised by the words in their names) — shows as a
-  material: Insert loads the paint bucket with it, its maps copied with a `.pbr.json` manifest
-  for Render Studio (the user's folder is left as it is).
+The panel has one page for each kind of thing: **Models**, **Materials** and **Backgrounds**. On each page a **source**
+box says where to look (the drawing, the whole catalog or one of its folders, or an online site), with a search by name, a
+**category** filter, an **Update** button and a menu (≡) for the catalog's folders, the model sites and the settings. Under
+the list: **Insert** (on models its arrow has **Insert as proxy**), **Save to catalog** and **Export…**.
+
+- **Categories**: give any number of categories to an item of the catalog or of the drawing (right-click, **Categories…**)
+  and filter by them. Online assets bring the site's own and keep them when saved to the catalog.
+- **The drawing's components** (Models page, source **In this drawing**): each one once, with a preview and how many there
+  are (the parts inside a dynamic component are not listed). The right-click menu has **Select all** (every instance that
+  can be selected where you are editing; it says how many are inside other groups; the view's own right-click menu has it
+  too, **Select all instances of «…»**), **Replace all…**, **Edit** and **Stand-in**. **Save to catalog** keeps a component
+  as an `.igz` of its own.
+- **The catalog**: folders of your own **models** (`.igz`, `.skp`, `.gltf`, `.glb`), **materials** and 360° **backgrounds**
+  (`.hdr`, `.exr`); add folders from the menu. A `.skp` shows the preview it carries; any model can have a `.png` with the
+  same name next to it. Double-click, **Insert** or drag onto the view; a `.skp` comes in keeping its components and
+  dynamic data when the `skp_dc_import` extension is installed. When you add a folder you choose whether it is **watched in
+  real time** (a model saved or downloaded into it shows at once, marked ●) or read again with **Update**. Downloads as they
+  come are understood too: a `.skp` or `.igz` **inside a `.zip`** is listed and taken out only when inserted, and a
+  **material set** downloaded from any site — a folder or zip with a colour image and its maps (normal, roughness, AO,
+  displacement…, recognised by the words in their names) — shows as a material: Insert loads the paint bucket with it, its
+  maps copied with a `.pbr.json` manifest for Render Studio (the user's folder is left as it is).
+- **Export…** saves the chosen item as files of its own, wherever you say.
+- A very heavy download asks first, and a very heavy model goes in as a proxy; the catalog shows each item's file size.
+- The mouse wheel scrolls the panel and its dialogs: it changes a drop-down or a slider only once you have clicked it.
+
 - **Materials of the drawing** are listed beside the catalog's, marked **(drawing)**, and have a folder of their own in the
   folder list (*Materials of this drawing*). **Save to catalog** keeps the chosen one in the extension's own folder
   (`Materials/`) as one **`.igmat`** — IngeTrazo's own material file, a single ZIP with the picture inside at its tile size,
@@ -112,25 +119,23 @@ A good companion of **Render Studio**: the models, materials and backgrounds to 
   (Extensions ▸ Library settings…). Download into a watched folder — your Downloads
   folder, for instance — and the model is in the catalog, ready to drag onto the view.
 - **Online** — free CC0 assets from **Poly Haven** (polyhaven.com: HDRIs, materials, 3-D
-  models) and **ambientCG** (ambientcg.com: HDRIs, materials, decals and atlases). The online assets have a tab each:
-  **360° backgrounds**, **Materials** and **Models**. **HDRIs** become Render Studio's 360°
-  background; **materials** come with all their maps (colour, normal, roughness, AO,
+  models) and **ambientCG** (ambientcg.com: HDRIs, materials, decals and atlases). Choose the site in a page's
+  source box. **HDRIs** become Render Studio's 360° background; **materials** come with all their maps (colour, normal, roughness, AO,
   displacement, metal…) and load the paint bucket with the colour image at the material's real
-  size (ambientCG's **Decals** and **Atlases** are in this tab too, as categories of their own; they come with an opacity map), with a `<colour image>.pbr.json` manifest next to it naming the other maps for a
+  size (ambientCG's **Decals** and **Atlases** are on the **Materials** page too, as categories of their own; they come with an opacity map), with a `<colour image>.pbr.json` manifest next to it naming the other maps for a
   renderer; **3-D models** (glTF) follow the cursor to be placed. Each source is reached only
   on its own servers, over https (redirects checked one by one); downloads are checked (MD5
   where the source gives it), kept in the extension's folder and reused. From an ambientCG zip
   only the map images (or, for an HDRI, the full-range `.exr`) are taken out. A glTF model's
   paints are registered under names that refer to the model («ArmChair_01», or «Model · Fabric»
   when the model has several), and a model comes in as a component, so Replace Component keeps
-  its place. **Save to catalog**, on each online tab, downloads the asset (if it is not here yet) and keeps a copy in the
+  its place. **Save to catalog** downloads the asset (if it is not here yet) and keeps a copy in the
   catalog (`Materials/`, `Models/` or `Backgrounds/` of the extension's folder), so it is there offline and in every drawing.
-- **Stand-in** (a check box on In drawing, and in the right-click menu of any selection): the
-  component shows translucent in the drawing and the render leaves it out; clear it when the real
-  thing is there. **Replace all…** swaps every placement of the chosen component for another one
-  of the model (stand-ins are cleared first), **Edit** opens it for editing, **Select all** picks
-  every placement.
-- **As proxy** (a check box on My catalog and on Online's 3-D models): the model goes in as a
+- **Stand-in** (right-click on a component, or on any selection in the view): the component shows translucent in the
+  drawing and the render leaves it out; clear it when the real thing is there. **Replace all…** swaps every placement of
+  the chosen component for another one of the model (stand-ins are cleared first), **Edit** opens it for editing,
+  **Select all** picks every placement.
+- **Insert as proxy** (under the arrow of **Insert**, for the catalog's and the online models): the model goes in as a
   light **envelope** in its place (its convex hull through some 64 of its outermost points, the
   gentle folds smooth; a rectangle for a flat model), and the full model is kept in an `.igz` of
   its own — in
@@ -152,28 +157,11 @@ A good companion of **Render Studio**: the models, materials and backgrounds to 
   front, its proxies take the change — a new envelope, one undo step — and Show original and the
   render bring the edited model).
 
-![Online tab with «As proxy»](docs/asset_manager_online.png)
-
 ![A table set as a proxy (left: its envelope) and as the full model (right)](docs/asset_manager_proxies.png)
 
 ![The right-click menu on a proxy](docs/asset_manager_proxy_menu.png)
 
-The five tabs of the Library, in order (the panel is named «Biblioteca» in Catalan):
-
-<table>
-<tr>
-<td valign="top"><img src="docs/asset_manager_in_drawing.png" width="230" alt="In drawing: the components of the document with their count"><br><b>In drawing</b>: the document's components, with a preview and how many there are.</td>
-<td valign="top"><img src="docs/asset_manager_library.png" width="230" alt="My catalog: models, materials and backgrounds with a type filter; the drawing's materials marked (drawing)"><br><b>My catalog</b>: models, materials and backgrounds, with a type filter; the drawing's materials are marked <i>(drawing)</i> and <b>Save to catalog</b> keeps them.</td>
-<td valign="top"><img src="docs/asset_manager_backgrounds.png" width="230" alt="360° backgrounds from Poly Haven"><br><b>360° backgrounds</b> (online): free HDRIs, <b>Use as 360° background</b> or <b>Save to catalog</b>.</td>
-</tr>
-<tr>
-<td valign="top"><img src="docs/asset_manager_online_materials.png" width="230" alt="Online materials from Poly Haven"><br><b>Materials</b> (online): full PBR sets; <b>Paint with it</b> loads the paint bucket, <b>Save to catalog</b> keeps a copy.</td>
-<td valign="top"><img src="docs/asset_manager_online_models.png" width="230" alt="Online 3-D models from Poly Haven"><br><b>Models</b> (online): glTF models that follow the cursor to be placed, also <b>as a proxy</b>.</td>
-<td></td>
-</tr>
-</table>
-
-Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.1, dc_tools 0.3.9, asset_manager 0.7.1, for IngeTrazo 0.6 (Extension API 2).
+Every change is one undo step. A long import (the .skp menu, Insert in the catalog, a model dropped from a file) shows a progress window: reading the file, building the parts, preparing the drawing. Versions: skp_dc_import 0.8.1, dc_tools 0.3.9, asset_manager 0.8.0, for IngeTrazo 0.6 (Extension API 2).
 
 **Languages.** The three extensions speak every language IngeTrazo does: English, Español, Català, Português (Brasil), 简体中文, 正體中文, Italiano, Bahasa Indonesia, Français, Deutsch, Polski, Русский, Tiếng Việt, ລາວ, ไทย, 日本語, 한국어, Українська, العربية, Български and Türkçe. They follow the language chosen in IngeTrazo; a text without a translation shows in English.
 
@@ -186,7 +174,7 @@ It is a separate extension and none of the three needs it, but they meet in the 
 
 - **SketchUp files** brings the file's lights in as Render Studio lights, and marks the light's symbol so the render
   leaves it out (Render Studio 0.17.0 or later).
-- **Library**: its online **HDRIs** are Render Studio's 360° backgrounds; its **materials** come with a
+- **Render Studio Library**: its online **HDRIs** are Render Studio's 360° backgrounds; its **materials** come with a
   `.pbr.json` manifest that Render Studio reads to use the normal, roughness, AO, displacement and metal maps; its
   **proxies** are rendered by Render Studio as their full model; and a **stand-in** (translucent in the drawing) is
   left out of the render.
@@ -237,7 +225,7 @@ difference: a stair landing's base, which SketchUp leaves unstretched when the s
 `tests_su/` holds the comparison scripts. They need SketchUp dumps of your own models (not
 included), except `test_author_offline.py`, whose cabinet is built the same way in both
 programs, and the Library's own tests, run with IngeTrazo's source:
-`test_asset_manager_offline.py`, `test_proxy_offline.py` (inserting as a proxy) and
+`test_asset_manager_offline.py`, `test_asset_manager_tabs.py` (the three pages), `test_proxy_offline.py` (inserting as a proxy) and
 `test_proxy_ops_offline.py` (Make proxy, Show original, Show proxy, Open original in a new tab, undo,
 copies, dynamic components). The last two take, as a third argument, the Proxies extension's
 `proxy_tool.py` to check that its commands work on these proxies too.
