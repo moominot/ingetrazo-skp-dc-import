@@ -89,9 +89,24 @@ ok(not g.children and all(len(e.faces) == 2 for e in g.mesh.edges) and len(g.mes
 import numpy as np
 P_all = proxy.points(Group(box(1, 1, 2)))
 P_all = np.vstack([P_all, P_all[:0], np.array([[0.25, 0.25, 2.5], [0.75, 0.75, 2.5], [0.25, 0.75, 2.5], [0.75, 0.25, 2.5]])])
-out_by = max(float(np.dot(f.normal().toTuple(), p - np.array(f.loop[0].position.toTuple())))
-             for f in g.mesh.faces for p in P_all)
-ok(out_by < 1e-6, f"every corner of the model is inside the envelope (worst {out_by:.2e} m outside)")
+# one envelope per piece: a point must be inside at least one of them (the faces that touch make one)
+def pieces(mesh):
+    left, out = list(mesh.faces), []
+    while left:
+        piece, seen = [left.pop()], set()
+        seen.update(id(v) for v in piece[0].loop)
+        more = True
+        while more:
+            more = False
+            for f in list(left):
+                if any(id(v) in seen for v in f.loop):
+                    left.remove(f); piece.append(f); seen.update(id(v) for v in f.loop); more = True
+        out.append(piece)
+    return out
+hulls = pieces(g.mesh)
+out_by = max(min(max(float(np.dot(f.normal().toTuple(), p - np.array(f.loop[0].position.toTuple()))) for f in h) for h in hulls)
+             for p in P_all)
+ok(out_by < 1e-6, f"every corner of the model is inside one of the envelope's {len(hulls)} pieces (worst {out_by:.2e} m outside)")
 ok(sum(1 for e in g.mesh.edges if e.soft) > 0 and any(not e.soft for e in g.mesh.edges),
    "its gentle folds are soft, its sharp ones are not")
 ok(g.is_component() and g.xform.map(QVector3D(0, 0, 0)) == QVector3D(3, 0, 0),
@@ -159,16 +174,12 @@ class App:
         self.scene = self.viewport.scene
     def on_document_changed(self, fn): pass
 from asset_manager.panel import AssetPanel
-catalog.set_as_proxy(False)
 panel = AssetPanel(App())
-ok(len(panel._proxy_boxes) == 2 and not any(b.isChecked() for b in panel._proxy_boxes),
-   "an «As proxy» box on the catalog and online tabs, off by default")
-panel._proxy_boxes[0].setChecked(True)
-ok(catalog.as_proxy() and panel._proxy_boxes[1].isChecked(), "one box sets both, and is remembered")
+panel._proxy_wanted = True
 gg = panel._model_group(src, interactive=False)
-ok(proxy.info_of(gg) is not None and "as a proxy" in panel.status.text(), "with the box on, a drag inserts the proxy and says so")
-panel._proxy_boxes[1].setChecked(False)
-ok(proxy.info_of(panel._model_group(src)) is None, "with the box off, the model itself")
+ok(proxy.info_of(gg) is not None and "as a proxy" in panel.status.text(), "«Insert as proxy» inserts the proxy and says so")
+panel._proxy_wanted = False
+ok(proxy.info_of(panel._model_group(src)) is None, "plain Insert: the model itself")
 
 # --- the Proxies extension on what was inserted -------------------------------------
 if PROXIES:

@@ -1,5 +1,5 @@
 """asset_manager: inventory, instances, thumbnails, catalog folders, Poly
-Haven logic, drag-and-drop placement, panel. Offscreen, no network.
+Haven logic, drag-and-drop placement, settings. Offscreen, no network.
 argv: <ingetrazo-src> <extension repo> [png dir]"""
 import os, sys, tempfile, pathlib
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -264,7 +264,7 @@ ok(sorted((i.name, i.kind, i.member) for i in zitems) == [("Cadira", "skp", "mod
                                                           ("Tiles", "material", None)],
    "a zip's model and material set, and a folder's material set, are listed")
 cad = next(i for i in zitems if i.name == "Cadira")
-ok(cad.label == "Cadira  ·  skp (zip)" and catalog.preview_bytes(cad) == png, "a .skp in a zip shows its own preview")
+ok(cad.label.startswith("Cadira  ·  skp (zip)") and catalog.preview_bytes(cad) == png, "a .skp in a zip shows its own preview")
 out = catalog.extract(cad)
 ok(out.read_bytes() == skp_bytes and pathlib.Path(home) in out.parents, "the model is taken out of the zip into the extension's folder")
 oak = next(i for i in zitems if i.name == "Oak")
@@ -356,65 +356,11 @@ ok(drop.provider is None and not drop._explorer and len(scene.groups) == before 
 place.group_from_file = real_from_file
 del sys.modules[place.SKP_EXT]
 
-# --- panel ----------------------------------------------------------------------------
-class App:
-    api_version = 2
-    def __init__(self, s): self.scene = s; self.window = win; self.viewport = vp
-    def on_document_changed(self, fn): pass
-app = App(scene)
-panel = AssetPanel(app)
-ok(panel.scene_list.count() == 2 and "⚙" in panel.scene_list.item(0).text() and "×2" in panel.scene_list.item(0).text(),
-   "panel lists components, dynamic marked, with counts")
-ok(panel.summary.text() == "2 components, 1 dynamic", "summary line")
-panel.scene_list.setCurrentRow(1); panel.select_current()
-ok(len(scene.selection) == sum(1 for g in scene.groups if g.mesh is src.mesh) == 4,
-   "Select all picks every placement of the component")
-panel.place_copy()
-ok(win.placed and win.placed[-1][0].mesh is src.mesh, "Place copy hands a copy to the placement tool")
-# stand-in, Edit and Replace all on the chosen component
-from asset_manager import stand_in as _SI
-entry = panel._current_entry()
-panel.stand_box.click()
-ok(all(_SI.is_stand_in(g) for g in entry.instances) and entry.sample.material == _SI.PAINT,
-   "the Stand-in box marks every placement of the component")
-panel.edit_current()
-ok(vp.edited is entry.sample, "Edit opens the component's group for editing")
-from PySide6.QtWidgets import QInputDialog
-QInputDialog.getItem = staticmethod(lambda *a, **k: ("Other  (1×)", True))
-panel.replace_all()
-ok(win.replaced[1] is scene.groups[0] and len(win.replaced[0]) == len(entry.instances)
-   and not any(_SI.is_stand_in(g) for g in entry.instances),
-   "Replace all selects every placement, clears the stand-ins, then replaces")
-panel.stand_box.click(); panel.stand_box.click()
-ok(not any(_SI.is_stand_in(g) for g in entry.instances), "ticking it again clears them")
-panel.tabs.setCurrentIndex(1); panel.refresh_catalog()
-ok(panel.cat_list.count() == 3 and panel.folder_box.count() == 3, "panel lists every folder's models")
-panel.folder_box.setCurrentIndex(panel.folder_box.findData(str(lib)))
-ok(panel.cat_list.count() == 1, "one folder shown")
-panel.cat_list.setCurrentRow(0); panel._catalog_icon(panel.cat_list.item(0))
-panel.cat_search.setText("zzz")
-ok(panel.cat_list.count() == 0, "search filters the catalog")
-panel.cat_search.setText("")
-ok("(live)" in panel.folder_box.itemText(panel.folder_box.findData(str(lib))), "a watched folder is marked live")
-ok(str(lib / "sub") in panel._watcher.directories(), "the watcher follows the folder and its subfolders")
-import time
-(lib / "sub" / "Nou.skp").write_bytes(b"x")
-t0 = time.time()
-while time.time() - t0 < 8 and not any("Nou" in panel.cat_list.item(i).text() for i in range(panel.cat_list.count())):
-    qa.processEvents(); time.sleep(0.05)
-row = next((panel.cat_list.item(i) for i in range(panel.cat_list.count()) if "Nou" in panel.cat_list.item(i).text()), None)
-ok(row is not None and row.text().startswith("● ") and row.font().bold(), "a model dropped in a watched folder shows at once, marked new")
-ok("Nou" in panel.status.text(), "and the panel says so")
-panel._fill_sites_menu()
-ok([a.text() for a in panel.site_btn.menu().actions() if a.text()] == ["Models", "https://other.org", "Add or edit sites…"],
-   "Open a model site offers the sites, then the settings")
+# --- settings (the panel itself: test_asset_manager_tabs.py) --------------------------
 from asset_manager import ui_settings
 dlg = ui_settings.SettingsDialog()
 ok(dlg.sites.count() == 2 and dlg.folders.count() == 2
    and dlg.folders.item(1).checkState() == Qt.Checked, "settings list the sites and the folders with their watch tick")
 dlg.folders.item(1).setCheckState(Qt.Unchecked)
 ok(catalog.watched() == [] and dlg.changed, "unticking a folder stops watching it")
-if PNG:
-    panel.tabs.setCurrentIndex(0)
-    panel.resize(320, 420); panel.show(); qa.processEvents(); panel.grab().save(os.path.join(PNG, "components.png"))
 print("FAILED" if fails else "ALL OK"); sys.exit(1 if fails else 0)

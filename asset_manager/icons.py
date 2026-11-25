@@ -199,7 +199,23 @@ def _render_studio(p, ink):
     _dot(p, 35, 20, 1.8)
 
 
+def _refresh(p, ink):
+    # One arrow round: update now.
+    p.setBrush(Qt.NoBrush)
+    pen = p.pen()
+    pen.setWidthF(3.6)                     # shown small, on a button
+    p.setPen(pen)
+    r = QRectF(9, 9, 30, 30)
+    q = QPainterPath()
+    q.arcMoveTo(r, 60)
+    q.arcTo(r, 60, 270)
+    p.drawPath(q)
+    a = math.radians(330)
+    _arrow_head(p, QPointF(24 + 15 * math.cos(a), 24 - 15 * math.sin(a)), -math.sin(a), -math.cos(a), 8.0)
+
+
 _DRAW = {
+    "refresh": _refresh,
     "comp_import": _comp_import, "comp_export": _comp_export,
     "comp_settings": _comp_settings, "comp_help": _comp_help,
     "comp_options": _comp_options, "comp_attributes": _comp_attributes,

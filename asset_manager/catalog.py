@@ -699,7 +699,7 @@ def _copy_preview(preview, dst_dir: Path, stem: str) -> None:
 
 def save_material(name: str, color_path=None, maps=None, size_m=(1.0, 1.0), rgb=None,
                   opacity=None, finish=None, source: str = "drawing", aid: str = "",
-                  preview_png: bytes | None = None):
+                  preview_png: bytes | None = None, dest: Path | None = None):
     """Keep a material in the catalog: a folder of its own with the images
     (``color_path`` and the other ``maps`` {key: path}) and a ``.pbr.json``
     manifest that also holds a plain colour (``rgb``), translucency and
@@ -710,7 +710,7 @@ def save_material(name: str, color_path=None, maps=None, size_m=(1.0, 1.0), rgb=
     from .online import MAP_KEYS, safe_name
     if not color_path and rgb is None:
         raise ValueError("the material has neither a colour nor an image")
-    out_dir = _target_dir("materials", name)
+    out_dir = Path(dest) if dest is not None else _target_dir("materials", name)
     manifest = out_dir / (safe_name(name) + MANIFEST_END)
     if manifest.is_file():
         return manifest, False
@@ -738,7 +738,7 @@ def save_material(name: str, color_path=None, maps=None, size_m=(1.0, 1.0), rgb=
     return manifest, True
 
 
-def _save_scene_material_igmat(mat):
+def _save_scene_material_igmat(mat, dest: Path | None = None):
     """The material of the drawing as one ``.igmat`` — IngeTrazo's own file: its picture inside (with the tile size, rotation and
     tint), its colour, translucency and finish; IngeTrazo's own **Import…** takes it too. Only for a material with no maps beside
     its picture (normal, roughness…: the ``.pbr.json`` folder keeps those) and in an IngeTrazo that has the format (0.6.3); else
@@ -759,7 +759,7 @@ def _save_scene_material_igmat(mat):
     color = getattr(mat, "color", None)
     if not tex and color is None:
         raise ValueError("the material has neither a colour nor an image")
-    out_dir = _target_dir("materials", mat.name)
+    out_dir = Path(dest) if dest is not None else _target_dir("materials", mat.name)
     path = out_dir / (online.safe_name(mat.name) + IGMAT)
     if path.is_file() or (out_dir / (online.safe_name(mat.name) + MANIFEST_END)).is_file():
         return path, False
@@ -770,14 +770,14 @@ def _save_scene_material_igmat(mat):
     return path, True
 
 
-def save_scene_material(mat, make_preview=None):
+def save_scene_material(mat, make_preview=None, dest: Path | None = None):
     """A material of the drawing (``core.materials.Material``) into the
     catalog: one ``.igmat`` when IngeTrazo has that format and the material
     has no maps beside its picture, else a folder with a ``.pbr.json``
     manifest (a plain colour then gets the picture ``make_preview(color,
     opacity, finish)`` returns, as PNG bytes). Returns ``(file, newly saved)``."""
     from . import online
-    saved = _save_scene_material_igmat(mat)
+    saved = _save_scene_material_igmat(mat, dest)
     if saved is not None:
         return saved
     tex = getattr(mat, "texture", None) or {}
@@ -799,7 +799,7 @@ def save_scene_material(mat, make_preview=None):
         except Exception:  # noqa: BLE001 - a preview is a nicety
             png = None
     return save_material(mat.name, color_path, maps, size, rgb=rgb, opacity=opacity,
-                         finish=finish, preview_png=png)
+                         finish=finish, preview_png=png, dest=dest)
 
 
 def save_online(kind: str, name: str, main, size_m=(1.0, 1.0), source: str = "", aid: str = "",

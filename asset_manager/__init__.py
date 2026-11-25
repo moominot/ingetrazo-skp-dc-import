@@ -12,7 +12,7 @@ format of the Proxies extension (``group.ext["proxy_tool"]``).
 """
 from __future__ import annotations
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"
 
 import logging
 
@@ -42,7 +42,7 @@ def setup(app):
             tr("Library…"), show,
             tip=tr("The components in the drawing, your catalog folders and free online assets.")),
         "polyhaven": app.add_menu_action(
-            tr("Online assets: HDRIs, materials and models…"), lambda: show(2),
+            tr("Online assets: HDRIs, materials and models…"), lambda: (show(0), panel.show_online()),
             tip=tr("Free CC0 360° backgrounds, materials and 3-D models from Poly Haven and ambientCG.")),
         "settings": app.add_menu_action(
             tr("Library settings…"), panel.open_settings,
