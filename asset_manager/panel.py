@@ -12,6 +12,7 @@ from PySide6.QtGui import QColor, QDesktopServices, QDrag, QIcon, QPixmap, QVect
 from PySide6.QtWidgets import (QApplication, QLabel, QListWidget, QMessageBox, QTabWidget,
                                QVBoxLayout, QWidget)
 
+from . import wheel_guard
 from . import catalog, export, inventory, kind_page, online, place, previews, stand_in, tags, thumbs
 from .i18n import tr, translate_on_show
 
@@ -168,6 +169,7 @@ class AssetPanel(QWidget):
             on_changed(self._document_changed)
         translate_on_show(self)
         QTimer.singleShot(2000, self._init_watch)
+        wheel_guard.watch(self)          # (the wheel scrolls; it changes only a picked field)
 
     # --- helpers -----------------------------------------------------------------
     def _say(self, text):

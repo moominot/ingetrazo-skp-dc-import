@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 
 from . import (ambientcg, catalog, export, inventory, online, place, polyhaven, previews,
                stand_in, tags, thumbs)
+from . import wheel_guard
 from .i18n import tr
 from .icons import icon
 
@@ -65,6 +66,7 @@ class TagsDialog(QDialog):
         box.rejected.connect(self.reject)
         lay.addWidget(box)
         self.resize(300, 340)
+        wheel_guard.watch(self)          # (the wheel scrolls; it changes only a picked field)
 
     def result_for(self, old: list[str]) -> list[str]:
         """What an item that had ``old`` has now (a half-ticked category stays as it was)."""

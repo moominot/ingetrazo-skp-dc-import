@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QFileDialog, QFormLayo
                                QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
                                QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout)
 
+from . import wheel_guard
 from . import catalog
 from .i18n import tr, translate_on_show
 
@@ -64,6 +65,7 @@ class SiteDialog(QDialog):
         buttons.rejected.connect(self.reject)
         form.addRow(buttons)
         translate_on_show(self)
+        wheel_guard.watch(self)          # (the wheel scrolls; it changes only a picked field)
 
     def _ok(self):
         url = self.url.text().strip()
@@ -131,6 +133,7 @@ class SettingsDialog(QDialog):
         self.changed = False
         self._fill()
         translate_on_show(self)
+        wheel_guard.watch(self)          # (the wheel scrolls; it changes only a picked field)
 
     # -- sites --
     def _fill(self):
