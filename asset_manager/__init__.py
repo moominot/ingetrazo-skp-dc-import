@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Library for IngeTrazo: what the drawing holds (with previews,
+"""Render Studio Library for IngeTrazo, a good companion of Render Studio: the
+models, materials and backgrounds it renders with. What the drawing holds (with previews,
 a mark on dynamic components, select every instance, drag a copy onto the
 view), catalog folders of your own models (.igz, .skp), and free online
 assets: Poly Haven's HDRIs, materials and 3-D models, ambientCG's HDRIs and materials.
@@ -29,7 +30,7 @@ def setup(app):
     from .icons import panel_icon
     from .panel import STAND_IN_TIP, AssetPanel
     panel = AssetPanel(app)
-    dock = app.add_panel(tr("Library"), panel, name="components",
+    dock = app.add_panel(tr("Render Studio Library"), panel, name="components",
                           **panel_icon(app, "comp_manager"))
 
     def show(tab=None):
@@ -39,13 +40,13 @@ def setup(app):
 
     acts = {
         "open": app.add_menu_action(
-            tr("Library…"), show,
+            tr("Render Studio Library…"), show,
             tip=tr("The components in the drawing, your catalog folders and free online assets.")),
         "polyhaven": app.add_menu_action(
             tr("Online assets: HDRIs, materials and models…"), lambda: (show(0), panel.show_online()),
             tip=tr("Free CC0 360° backgrounds, materials and 3-D models from Poly Haven and ambientCG.")),
         "settings": app.add_menu_action(
-            tr("Library settings…"), panel.open_settings,
+            tr("Render Studio Library settings…"), panel.open_settings,
             tip=tr("Model sites to open, and which catalog folders are watched in real time.")),
     }
 

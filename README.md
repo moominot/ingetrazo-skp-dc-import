@@ -63,7 +63,10 @@ components and export it back.
   its new size (copies, parts that keep their size, formulas) instead of stretched, in the
   same undo step as the scale; the result is the same as typing its LenX/LenY/LenZ.
 
-## Library (`asset_manager`)
+## Render Studio Library (`asset_manager`)
+
+A good companion of **Render Studio**: the models, materials and backgrounds to render with, in one place. It works on its own too.
+(Its folder and identifier stay `asset_manager`, so settings, catalog folders and updates carry on.)
 
 - **In drawing**: every component of the document once, with a preview and how many there are
   (the parts inside a dynamic component are not listed). **Select all** selects every instance
